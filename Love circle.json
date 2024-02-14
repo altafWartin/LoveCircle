@@ -1,0 +1,356 @@
+{
+    "info": {
+      "name": "Love Circle collection",
+      "_postman_id": "unique-identifier",
+      "description": "Description of your API collection",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "User",
+        "item": [
+          {
+            "name": "Create User",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/createUser",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "createUser"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Check if User Exists",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/userExists",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "userExists"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Refresh Token",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/refreshToken",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "refreshToken"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },      {
+            "name": "Update Additional Details",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/updateAdditionalDetails",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "updateAdditionalDetails"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          }
+        ]
+      },
+      {
+        "name": "Profile",
+        "item": [
+          {
+            "name": "Get Profile",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/getProfile",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "getProfile"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Add Like/Dislike to Profile",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/addLikeDislikeProfile",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "addLikeDislikeProfile"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get Liked/Disliked Profiles",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/getLikedDislikeProfile",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "getLikedDislikeProfile"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Upload Image",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/uploadImage",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "uploadImage"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Replace Image",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/replaceImage",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "replaceImage"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get Single Profile",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/getSingleProfile",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "getSingleProfile"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Update Request Status",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/updateRequestStatus",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "updateRequestStatus"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Update User Fields",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/updateUserFields",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "updateUserFields"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          }
+
+        ]
+      }, {
+        "name": "Countries",
+        "item": [
+          {
+            "name": "Get Cities",
+            "request": {
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/getCities/:text",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "getCities", ":text"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          }
+
+        ]
+      },
+      {
+        "name": "Chat",
+        "item": [
+          {
+            "name": "Create Chat Room",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/createChatRoom",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "createChatRoom"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get All Chat Rooms",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/getAllChatRoom",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "getAllChatRoom"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get Single Chat",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/getSingleChat",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "getSingleChat"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Send Single Chat",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/sendSingleChat",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "sendSingleChat"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Update Message Status",
+            "request": {
+              "method": "POST",
+              "header": [],
+              "url": {
+                "raw": "{{URL}}/api/updateMessageStatus",
+                "protocol": "http",
+                "host": ["{{URL}}"],
+                "path": ["api", "updateMessageStatus"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{}"
+              }
+            },
+            "response": []
+          }
+
+        ]
+      }
+    ]
+  }
+  
