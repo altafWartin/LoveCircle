@@ -43,18 +43,23 @@ app.use("/api", profileRoutes);
 app.use("/api", chatRoutes);
 // app.use()
 
-const port = process.env.PORT || 8000;
+// const port = process.env.PORT || 8000;
 
-if (process.env.AWS_LAMBDA == "false") {
-  app.listen(port, () => {
-    console.log(`server is running on PORT ${port}`);
-  });
-}
+// if (process.env.AWS_LAMBDA == "false") {
+//   app.listen(port, () => {
+//     console.log(`server is running on PORT ${port}`);
+//   });
+// }
+const port = process.env.PORT || 8000;
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
 app.get("/", async (req, res, next) => {
   res.status(200).send("Hello World!");
 });
 
-if (process.env.AWS_LAMBDA == "true") module.exports.server = sls(app);
+// if (process.env.AWS_LAMBDA == "true") module.exports.server = sls(app);
 // aws-cli keys
 // "",
 // "",
