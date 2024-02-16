@@ -162,7 +162,7 @@ exports.loginUser = async (req, res) => {
 
   if (!user && !user.comparePassword(password)) {
     // If user doesn't exist or password doesn't match
-    return res.status(401).json({ error: "Invalid credentials" });
+    return res.status(401).json({ error: "Invalid credentials" });  
   }
 
 

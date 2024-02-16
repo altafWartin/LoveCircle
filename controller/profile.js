@@ -122,19 +122,43 @@ exports.getLikedDislikeProfile = async (req, res) => {
   }
 };
 
+// function decodeBase64Image(dataString) {
+//   var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+//   var response = {};
+
+//   if (matches.length !== 3) {
+//     return new Error("Invalid input string");
+//   }
+
+//   response.type = matches[1];
+//   response.data = new Buffer.from(matches[2], "base64");
+
+//   return response;
+// }
+
 function decodeBase64Image(dataString) {
+  // Use a regular expression to match the expected format of a data URI for base64-encoded images
   var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+
+  // Create an empty object to store the response
   var response = {};
 
-  if (matches.length !== 3) {
+  // Check if the regular expression produced a match with three components
+  if (matches && matches.length === 3) {
+    // If the match is successful, extract the image type and decode the base64 data
+    response.type = matches[1];
+    response.data = Buffer.from(matches[2], "base64");
+  } else {
+    // If the match is not successful, return an error indicating an invalid input string
     return new Error("Invalid input string");
   }
 
-  response.type = matches[1];
-  response.data = new Buffer.from(matches[2], "base64");
-
+  // Return the response object, containing the image type and decoded data
   return response;
 }
+
+
+
 
 async function uploadImageToAWS(photo, id, index) {
   // Generate random string

@@ -1,10 +1,10 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const sls = require("serverless-http");
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getMessaging } = require("firebase-admin/messaging");
-require("dotenv").config();
 
 // for FCM
 process.env.GOOGLE_APPLICATION_CREDENTIALS;
@@ -44,6 +44,7 @@ app.use("/api", chatRoutes);
 // app.use()
 
 const port = process.env.PORT || 8000;
+
 if (process.env.AWS_LAMBDA == "false") {
   app.listen(port, () => {
     console.log(`server is running on PORT ${port}`);

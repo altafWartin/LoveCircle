@@ -12,6 +12,8 @@ const s3 = new AWS.S3({
   secretAccessKey,
 });
 
+
+
 // uploads a file to s3
 async function uploadFile(file, name) {
   buf = Buffer.from(file.replace(/^data:image\/\w+;base64,/, ""), "base64");
