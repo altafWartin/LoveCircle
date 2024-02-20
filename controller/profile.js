@@ -3,10 +3,12 @@ const LikeDislikeRequested = require("../models/profile/like_dislike_requested")
 const LikeDislikeStatus = require("../models/profile/like_dislike_status");
 var crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
+const base64 = require("node-base64-image");
+
 const { uploadFile, deleteFile } = require("../s3");
 const ChatRoom = require("../models/chat/chatroom");
 const Chat = require("../models/chat/chatMessages");
-const { getMessaging } = require("firebase-admin/messaging")
+const { getMessaging } = require("firebase-admin/messaging");
 
 exports.getProfile = async (req, res) => {
   var { gender } = req.body;
@@ -48,14 +50,14 @@ exports.LikedOrNotProfile = async (req, res) => {
         },
         android: {
           notification: {
-            icon: 'launcher_icon',
-            color: '#7e55c3',
+            icon: "launcher_icon",
+            color: "#7e55c3",
             default_sound: true,
             priority: "high",
-          }
+          },
         },
         data: {
-          context: "likes"
+          context: "likes",
         },
         token: receivedToken[i],
       };
@@ -82,7 +84,9 @@ exports.LikedOrNotProfile = async (req, res) => {
         });
     }
   }
-  var profileExists = await LikeDislikeRequested.findOne({ $and: [{ userID: userID }, { likedID: likedID }] })
+  var profileExists = await LikeDislikeRequested.findOne({
+    $and: [{ userID: userID }, { likedID: likedID }],
+  });
   if (profileExists == null) {
     likeDislikeProfile.save().then((profile) => {
       return res.json(profile);
@@ -122,116 +126,220 @@ exports.getLikedDislikeProfile = async (req, res) => {
   }
 };
 
-// function decodeBase64Image(dataString) {
-//   var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-//   var response = {};
+const AWS = require("aws-sdk");
 
-//   if (matches.length !== 3) {
-//     return new Error("Invalid input string");
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEYS,
+  secretAccessKey: process.env.AWS_SECRET_KEYS,
+  region: process.env.AWS_BUCKET_REGION,
+});
+
+// exports.uploadImage = async (req, res) => {
+//   try {
+//     const { id } = req.body;
+//     const photo = req.file;
+
+//     console.log("Received image upload request for user:", id, photo);
+
+//     if (!id) {
+//       console.log("id is not provided");
+//       return res.json("id is not provided");
+//     }
+
+//     if (!photo || !photo.buffer) {
+//       console.log("Photo data is not provided");
+//       return res.json("Photo data is not provided");
+//     }
+
+//     const params = {
+//       Bucket: process.env.AWS_BUCKET_NAME,
+//       Key: `images/${id}_${Date.now()}_${photo.originalname}`,
+//       Body: photo.buffer,
+//     };
+
+//     const uploadResult = await s3.upload(params).promise();
+//     console.log("Image uploaded to AWS S3:", uploadResult);
+
+//     // Update the user's document with the image URL
+//     const updatedUser = await User.findByIdAndUpdate(
+//       id,
+//       { $push: { images: uploadResult.Location } }, // Assuming 'images' is an array field in your User model
+//       { new: true }
+//     );
+
+//     if (updatedUser) {
+//       console.log("User profile updated:", updatedUser);
+//       return res.json({
+//         message: 'Image uploaded and user profile updated successfully',
+//         imageUrl: uploadResult.Location,
+//         profile: updatedUser,
+//       });
+//     } else {
+//       console.log("findOneAndUpdate not working");
+//       return res.json("findOneAndUpdate not working");
+//     }
+//   } catch (error) {
+//     console.error("Error uploading image:", error);
+//     return res.status(500).json("Internal Server Error");
 //   }
-
-//   response.type = matches[1];
-//   response.data = new Buffer.from(matches[2], "base64");
-
-//   return response;
-// }
-
-function decodeBase64Image(dataString) {
-  // Use a regular expression to match the expected format of a data URI for base64-encoded images
-  var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-
-  // Create an empty object to store the response
-  var response = {};
-
-  // Check if the regular expression produced a match with three components
-  if (matches && matches.length === 3) {
-    // If the match is successful, extract the image type and decode the base64 data
-    response.type = matches[1];
-    response.data = Buffer.from(matches[2], "base64");
-  } else {
-    // If the match is not successful, return an error indicating an invalid input string
-    return new Error("Invalid input string");
-  }
-
-  // Return the response object, containing the image type and decoded data
-  return response;
-}
-
-
-
-
-async function uploadImageToAWS(photo, id, index) {
-  // Generate random string
-  var seed = crypto.randomBytes(20);
-  var uniqueSHA1String = crypto.createHash("sha1").update(seed).digest("hex");
-  var base64Data = photo;
-
-  //decode image
-  var imageBuffer = decodeBase64Image(base64Data);
-
-  //Create URL
-  var uniqueRandomImageName = "date-madly-" + uniqueSHA1String;
-  var imageTypeRegularExpression = /\/(.*?)$/;
-  var imageTypeDetected = imageBuffer.type.match(imageTypeRegularExpression);
-  const url = uniqueRandomImageName + "." + imageTypeDetected[1];
-
-  // Upload Image to AWS S3
-  await uploadFile(base64Data, url);
-  // Save to DB
-  var push = index != 'single' ? { $push: { images: { $each: [url], $position: index } } } : { $push: { images: [url] } }
-  var user = await User.findOneAndUpdate(
-    { _id: id },
-    push,
-    { new: true }
-  );
-  return user;
-}
+// };
 
 exports.uploadImage = async (req, res) => {
-  var { id, photo } = req.body;
-
   try {
-    const user = await uploadImageToAWS(photo, id, 'single');
-    if (user) {
-      // return res.json({ user });
-      var profile = await User.find({ _id: id }).select("images");
-      return res.json({ profile });
-    } else {
-      return res.json("findOneandUpdate not working");
+    const { id } = req.body;
+    const photo = req.file;
+
+    console.log("Received image upload request for user:", id, photo);
+
+    if (!id) {
+      console.log("id is not provided");
+      return res.status(400).json({ error: "id is not provided" });
+    }
+
+    if (!photo || !photo.buffer) {
+      console.log("Photo data is not provided");
+      return res.status(400).json({ error: "Photo data is not provided" });
+    }
+
+    const params = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: `images/${id}_${Date.now()}_${photo.originalname}`,
+      Body: photo.buffer,
+    };
+
+    try {
+      // Attempt S3 upload
+      const uploadResult = await s3.upload(params).promise();
+      console.log("Image uploaded to AWS S3:", uploadResult);
+
+      // Attempt to update the user's document with the image URL
+      const updatedUser = await User.findByIdAndUpdate(
+        id,
+        { $push: { images: uploadResult.Location } },
+        { new: true }
+      );
+
+      if (updatedUser) {
+        console.log("User profile updated:", updatedUser);
+        return res.json({
+          message: "Image uploaded and user profile updated successfully",
+          imageUrl: uploadResult.Location,
+          profile: updatedUser,
+        });
+      } else {
+        console.log("findOneAndUpdate not working");
+        return res.status(500).json({ error: "findOneAndUpdate not working" });
+      }
+    } catch (uploadError) {
+      console.error("Error uploading image to AWS S3:", uploadError);
+      return res.status(500).json({ error: "Error uploading image to AWS S3" });
     }
   } catch (error) {
-    console.log("ERROR:", error);
+    console.error("Error processing image upload request:", error);
+    return res.status(500).json("Internal Server Error");
   }
 };
+
+
+
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_BUCKET_REGION,
+});
+
+
+
+
+// Function to check if a string is a valid URL
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+
 
 exports.replaceImage = async (req, res) => {
-  var { id, oldPhotoURL, newPhoto, index } = req.body;
+  try {
+    const { id, oldPhotoURL, index } = req.body;
+    const newPhoto = req.file;
 
-  // delete old pic from DB
-  // delete image from AWS
-  // upload new image to AWS and update in server
-  console.log(index);
-  var user = await User.findOneAndUpdate(
-    { _id: id },
-    { $pull: { images: oldPhotoURL } },
-    { new: true }
-  );
-  // old image deleted from DB
-  if (user) {
-    try {
-      await deleteFile(oldPhotoURL);
-      // upload new image to AWS and update in server
-      const user = await uploadImageToAWS(newPhoto, id, index);
-      if (user) {
-        // return res.json({ user });
-        var profile = await User.find({ _id: id }).select("images");
-        return res.json({ profile });
-      }
-    } catch (error) {
-      console.log("ERROR:", error);
+    console.log("Received replaceImage request:", { id, oldPhotoURL, newPhoto, index });
+
+    if (!id || !isValidUrl(oldPhotoURL) || isNaN(index)) {
+      console.log("Invalid request parameters");
+      return res.status(400).json({ error: "Invalid request parameters" });
     }
+
+    console.log("Finding and updating user document in the database");
+    const user = await User.findOneAndUpdate(
+      { _id: id },
+      { $pull: { images: oldPhotoURL } },
+      { new: true }
+    );
+
+    if (user) {
+      console.log("User document updated successfully:", user);
+
+      try {
+        console.log("Deleting old image file from storage (if needed)");
+
+        // Add any logic here if you need to delete the old image file from your storage system
+
+        console.log("Uploading new image to AWS S3 and updating the server");
+
+        const params = {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: `images/${id}_${Date.now()}_${newPhoto.originalname}`,
+          Body: newPhoto.buffer,
+        };
+
+        try {
+          // Attempt S3 upload
+          const uploadResult = await s3.upload(params).promise();
+          console.log("Image uploaded to AWS S3:", uploadResult);
+
+          // Attempt to update the user's document with the image URL
+          const updatedUser = await User.findByIdAndUpdate(
+            id,
+            { $push: { images: uploadResult.Location } },
+            { new: true }
+          );
+
+          if (updatedUser) {
+            console.log("User profile updated:", updatedUser);
+            return res.json({
+              message: "Image uploaded and user profile updated successfully",
+              imageUrl: uploadResult.Location,
+              profile: updatedUser,
+            });
+          } else {
+            console.log("findOneAndUpdate not working");
+            return res.status(500).json({ error: "findOneAndUpdate not working" });
+          }
+        } catch (uploadError) {
+          console.error("Error uploading image to AWS S3:", uploadError);
+          return res.status(500).json({ error: "Error uploading image to AWS S3" });
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+    } else {
+      console.log("Error: User not found or error updating user document");
+      return res.status(500).json({ error: "Error removing old image from DB" });
+    }
+  } catch (error) {
+    console.error("Error processing image replace request:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+
 
 exports.getSingleProfile = async (req, res) => {
   var { _id } = req.body;
@@ -315,26 +423,90 @@ exports.updateRequestStatus = async (req, res) => {
   });
 };
 
+// exports.updateUserFields = async (req, res) => {
+//   var { designation, company, income, _id, degree } = req.body;
+
+//   const filter = { _id: _id };
+//   var update;
+
+//   if (designation) {
+//     console.log(designation);
+//     update = { designation: designation };
+//   }
+//   if (income) {
+//     update = { company: company, income: income };
+//   }
+//   if (degree) {
+//     update = { degree: degree };
+//   }
+
+//   let user = await User.findOneAndUpdate(filter, update, { new: true });
+
+//   return res.json({ user });
+// };
+
 exports.updateUserFields = async (req, res) => {
-  var { designation, company, income, _id, degree } = req.body;
+  const {
+    name,
+    designation,
+    company,
+    income,
+    _id,
+    degree,
+    gender,
+    dob,
+    location,
+    job,
+    college,
+    about,
+  } = req.body;
 
   const filter = { _id: _id };
-  var update;
+  const update = {};
 
   if (designation) {
-    console.log(designation);
-    update = { designation: designation };
+    update.designation = designation;
+  }
+  if (company) {
+    update.company = company;
   }
   if (income) {
-    update = { company: company, income: income };
+    update.income = income;
   }
   if (degree) {
-    update = { degree: degree };
+    update.degree = degree;
+  }
+  if (gender) {
+    update.gender = gender;
+  }
+  if (dob) {
+    update.dob = dob;
+  }
+  if (location) {
+    update.location = location;
+  }
+  if (job) {
+    update.job = job;
+  }
+  if (college) {
+    update.college = college;
+  }
+  if (about) {
+    update.about = about;
   }
 
-  let user = await User.findOneAndUpdate(filter, update, { new: true });
+  if (name) {
+    update.name = name;
+  }
 
-  return res.json({ user });
+  try {
+    const user = await User.findOneAndUpdate(filter, update, { new: true });
+    return res.json({ user });
+  } catch (error) {
+    // Handle error appropriately
+    console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 };
 
 // function getAge(DOB) {

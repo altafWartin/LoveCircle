@@ -333,8 +333,8 @@ exports.userExists = async (req, res) => {
 
 exports.updateAdditionalDetails = async (req, res) => {
   var {
-    cuisine,
     sun_sign,
+    cuisine,
     political_views,
     looking_for,
     personality,

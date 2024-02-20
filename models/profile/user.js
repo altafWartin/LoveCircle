@@ -17,16 +17,20 @@ const userSchema = mongoose.Schema(
     //   type: { type: String },
     //   coordinates: [Number],
     // },
-    gender: { type: String },
-    dob: { type: Date },
-    height: { type: Number, required: true },
+    height: { type: Number},
     live: { type: String },
     belongTo: { type: String },
     relationStatus: { type: String },
     degree: { type: String },
     institute: { type: String },
     designation: { type: String },
-    company: { type: String },
+    gender: { type: String },
+    dob: { type: Date },
+    company: { type: String },        ///
+    location:{type: String },         ///
+    job: { type: String },           ///
+    college: { type: String },      ///
+    about: { type: String }, ///
     income: { type: String },
     describe: [{ type: String }],
     visibility: { type: Number, default: 0 }, //0 means Visible to everyone, 1 means private
