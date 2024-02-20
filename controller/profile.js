@@ -3,7 +3,6 @@ const LikeDislikeRequested = require("../models/profile/like_dislike_requested")
 const LikeDislikeStatus = require("../models/profile/like_dislike_status");
 var crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
-const base64 = require("node-base64-image");
 
 const { uploadFile, deleteFile } = require("../s3");
 const ChatRoom = require("../models/chat/chatroom");
