@@ -10,7 +10,7 @@ const {
   checkError,
   decodeToken,
 } = require("../controller/user");
-const router = express.Router();
+const router = express.Router();  
 
 router.post("/loginUser", loginUser);
 router.post("/getAllUsers", getAllUsers, decodeToken,requireSignin);

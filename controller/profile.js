@@ -263,7 +263,7 @@ function isValidUrl(string) {
 
 exports.replaceImage = async (req, res) => {
   try {
-    const { id, oldPhotoURL, index } = req.body;
+    const { id, oldPhotoURL, index=0 } = req.body;
     const newPhoto = req.file;
 
     console.log("Received replaceImage request:", { id, oldPhotoURL, newPhoto, index });
