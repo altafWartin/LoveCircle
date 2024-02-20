@@ -160,35 +160,66 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+// exports.loginUser = async (req, res) => {
+//   try {
+//     var { email, password, type } = req.body;
+
+//     console.log("Type:", type);
+
+//     var user;
+//     if (type === "email") {
+//       console.log("Email");
+//       user = await User.findOne({ email: email });
+//     }
+
+//     if (!user.comparePassword(password)) {
+//       // If user doesn't exist or password doesn't match
+//       return res.status(401).json({ error: "Invalid credentials" });
+//     }
+
+//     const jwtToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
+//       expiresIn: process.env.JWT_EXPIRY,
+//     });
+
+//     return res.json({ user, jwtToken });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
+
+const bcrypt = require('bcrypt'); // for password hashing
+
+
 exports.loginUser = async (req, res) => {
-  var { phoneNo, email, password, type } = req.body;
+  const { email, password } = req.body;
 
-  console.log("Type:", type);
+  try {
+    const user = await User.findOne({ email });
 
-  var user;
-  if (type === "phone") {
-    console.log("Phone");
-    user = await User.findOne({ phoneNo: phoneNo });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
-  } else if (type === "email") {
-    console.log("Email");
-    user = await User.findOne({ email: email });
+    // Compare the provided password with the hashed password stored in the database
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
-  }
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
-  if (!user && !user.comparePassword(password)) {
-    // If user doesn't exist or password doesn't match
-    return res.status(401).json({ error: "Invalid credentials" });  
-  }
-
-
+    // If the password is valid, create a JWT token for the user
     const jwtToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRY,
+    });
 
-    })
-    return res.json({ user, jwtToken })
-
+    return res.json({ user, jwtToken });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 };
+
 
 
 

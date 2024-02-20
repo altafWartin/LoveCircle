@@ -13,7 +13,7 @@ const {
 const router = express.Router();
 
 router.post("/loginUser", loginUser);
-router.post("/getAllUsers", getAllUsers);
+router.post("/getAllUsers", getAllUsers, decodeToken,requireSignin);
 router.post("/createUser", createUser);
 router.post("/userExists", userExists);
 router.post("/refreshToken", refreshToken);
