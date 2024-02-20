@@ -11,29 +11,43 @@ const { getMessaging } = require("firebase-admin/messaging")
 // });
 
 exports.createChatRoom = async (req, res) => {
-  var { participants, lastMessage } = req.body;
+  try {
+    var { participants, lastMessage } = req.body;
 
-  var findChatRoom = await ChatRoom.find({ participants: participants });
-  if (findChatRoom) {
-    return res.json({ chatRoom });
-  }
-  var chatroomID = uuidv4();
+    console.log("Request Body:", req.body);
 
-  var chatRoom = new ChatRoom({
-    chatroomID,
-    participants,
-    lastMessage,
-  });
+    var findChatRoom = await ChatRoom.find({ participants: participants });
 
-  chatRoom
-    .save()
-    .then(() => {
-      return res.json({ chatRoom });
-    })
-    .catch((err) => {
-      return res.status(400).json({ error: err });
+    console.log("Existing Chat Rooms:", findChatRoom);
+
+    if (findChatRoom && findChatRoom.length > 0) {
+      console.log("Chat Room Already Exists");
+      return res.json({ chatRoom: findChatRoom[0] });
+    }
+
+    var chatroomID = uuidv4();
+
+    console.log("Creating new Chat Room with ID:", chatroomID);
+
+    var chatRoom = new ChatRoom({
+      chatroomID,
+      participants,
+      lastMessage,
     });
+
+    console.log("New Chat Room Object:", chatRoom);
+
+    await chatRoom.save();
+
+    console.log("Chat Room Saved Successfully");
+
+    return res.json({ chatRoom });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(400).json({ error: err.message });
+  }
 };
+
 
 exports.getAllChatRoom = async (req, res) => {
   var { id } = req.body;

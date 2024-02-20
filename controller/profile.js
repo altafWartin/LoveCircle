@@ -96,7 +96,7 @@ exports.LikedOrNotProfile = async (req, res) => {
 };
 
 exports.getLikedDislikeProfile = async (req, res) => {
-  var { userID, status } = req.body;
+  var { userID, likedID, status } = req.body;
   var likedDislikeProfile = await LikeDislikeRequested.find({
     likedID: userID,
     status: status,
@@ -187,7 +187,6 @@ exports.uploadImage = async (req, res) => {
   try {
     const { id } = req.body;
     const photo = req.file;
-
     console.log("Received image upload request for user:", id, photo);
 
     if (!id) {

@@ -11,7 +11,8 @@ const storage = multer.memoryStorage(); // Use memory storage for storing file b
 const upload = multer({ storage: storage });
 
 
-router.post("/getProfile", requireSignin, checkError,  getProfile);
+router.post("/getProfile",  getProfile);
+// router.post("/getProfile", requireSignin, checkError,  getProfile);
 router.post("/addLikeDislikeProfile", LikedOrNotProfile);
 // router.post("/getLikedDislikeProfile", requireSignin, checkError, decodeToken, getLikedDislikeProfile);
 router.post("/getLikedDislikeProfile", getLikedDislikeProfile);

@@ -144,6 +144,22 @@ password,
     });
 };
 
+
+// Define the getAllUsers function
+exports.getAllUsers = async (req, res) => {
+  console.log("hello")
+  try {
+    // Fetch all users from the database
+    const allUsers = await User.find();
+
+    // Return the list of users in the response
+    return res.json({ users: allUsers });
+  } catch (error) {
+    // Handle any errors that occur during the process
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 exports.loginUser = async (req, res) => {
   var { phoneNo, email, password, type } = req.body;
 

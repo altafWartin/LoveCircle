@@ -1,9 +1,19 @@
 const express = require("express");
-const {loginUser, createUser, userExists, refreshToken, updateAdditionalDetails, requireSignin, checkError, decodeToken } = require("../controller/user");
+const {
+  loginUser,
+  getAllUsers,
+  createUser,
+  userExists,
+  refreshToken,
+  updateAdditionalDetails,
+  requireSignin,
+  checkError,
+  decodeToken,
+} = require("../controller/user");
 const router = express.Router();
 
-
 router.post("/loginUser", loginUser);
+router.post("/getAllUsers", getAllUsers);
 router.post("/createUser", createUser);
 router.post("/userExists", userExists);
 router.post("/refreshToken", refreshToken);
