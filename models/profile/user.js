@@ -11,6 +11,7 @@ const userSchema = mongoose.Schema(
     password: { type: String },
     device_tokens: [{ type: String }],
     images: [{ type: String }],
+    profilePhoto: { type: String },
     profileScore: { type: Number, default: 50 },
     phoneNo: { type: Number, index: true },
     // loc: {

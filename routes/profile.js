@@ -11,18 +11,15 @@ const storage = multer.memoryStorage(); // Use memory storage for storing file b
 const upload = multer({ storage: storage });
 
 
-router.post("/getProfile",  getProfile);
-// router.post("/getProfile", requireSignin, checkError,  getProfile);
-router.post("/addLikeDislikeProfile", LikedOrNotProfile);
-// router.post("/getLikedDislikeProfile", requireSignin, checkError, decodeToken, getLikedDislikeProfile);
-router.post("/getLikedDislikeProfile", getLikedDislikeProfile);
-router.post("/uploadImage", upload.single('photo'), uploadImage);
 
+router.post("/getProfile", requireSignin, checkError,  getProfile);
+router.post("/addLikeDislikeProfile", LikedOrNotProfile);
+router.post("/getLikedDislikeProfile", requireSignin, checkError, decodeToken, getLikedDislikeProfile);
+router.post("/uploadImage", upload.single('photo'), uploadImage);
 router.post("/replaceImage", upload.single('newPhoto'), replaceImage);
 router.post("/getSingleProfile", getSingleProfile);
-router.post("/updateRequestStatus",  updateRequestStatus)
-// router.post("/updateRequestStatus", requireSignin, checkError, decodeToken, updateRequestStatus)
-router.post("/updateUserFields", updateUserFields)   
+router.post("/updateRequestStatus", requireSignin, checkError, decodeToken, updateRequestStatus)
+router.post("/updateUserFields",upload.single('profile'), updateUserFields)   
 
 module.exports = router;
 

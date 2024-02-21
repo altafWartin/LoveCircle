@@ -263,7 +263,7 @@ function isValidUrl(string) {
 
 exports.replaceImage = async (req, res) => {
   try {
-    const { id, oldPhotoURL, index=0 } = req.body;
+    const { id, oldPhotoURL, index=1 } = req.body;
     const newPhoto = req.file;
 
     console.log("Received replaceImage request:", { id, oldPhotoURL, newPhoto, index });
@@ -443,6 +443,72 @@ exports.updateRequestStatus = async (req, res) => {
 //   return res.json({ user });
 // };
 
+// exports.updateUserFields = async (req, res) => {
+//   const {
+//     name,
+//     designation,
+//     company,
+//     income,
+//     _id,
+//     degree,
+//     gender,
+//     dob,
+//     location,
+//     job,
+//     college,
+//     about,
+//   } = req.body;
+
+//   const filter = { _id: _id };
+//   const update = {};
+
+//   if (designation) {
+//     update.designation = designation;
+//   }
+//   if (company) {
+//     update.company = company;
+//   }
+//   if (income) {
+//     update.income = income;
+//   }
+//   if (degree) {
+//     update.degree = degree;
+//   }
+//   if (gender) {
+//     update.gender = gender;
+//   }
+//   if (dob) {
+//     update.dob = dob;
+//   }
+//   if (location) {
+//     update.location = location;
+//   }
+//   if (job) {
+//     update.job = job;
+//   }
+//   if (college) {
+//     update.college = college;
+//   }
+//   if (about) {
+//     update.about = about;
+//   }
+
+//   if (name) {
+//     update.name = name;
+//   }
+
+//   try {
+//     const user = await User.findOneAndUpdate(filter, update, { new: true });
+//     return res.json({ user });
+//   } catch (error) {
+//     // Handle error appropriately
+//     console.error(error);
+//     return res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
+
+
+
 exports.updateUserFields = async (req, res) => {
   const {
     name,
@@ -459,46 +525,48 @@ exports.updateUserFields = async (req, res) => {
     about,
   } = req.body;
 
+  // Photo upload parameters
+  const profile = req.file; // Assuming you are using middleware like multer for file upload
+  const profileKey = `profiles/${_id}_${Date.now()}_${profile.originalname}`;
+
+
+
+  const params = {
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Key: profileKey,
+    Body: profile.buffer,
+  };
+
+  // Attempt S3 upload
+  const uploadResult = await s3.upload(params).promise();
+  console.log("Image uploaded to AWS S3:", uploadResult);
+
+  // Update fields
+  const update = {
+    ...(designation && { designation }),
+    ...(company && { company }),
+    ...(income && { income }),
+    ...(degree && { degree }),
+    ...(gender && { gender }),
+    ...(dob && { dob }),
+    ...(location && { location }),
+    ...(job && { job }),
+    ...(college && { college }),
+    ...(about && { about }),
+    ...(name && { name }),
+    ...(profile && { profilePhoto: uploadResult.Location })
+     // Add a field to store the photo key in the user document
+  };
+  console.log(update);
   const filter = { _id: _id };
-  const update = {};
-
-  if (designation) {
-    update.designation = designation;
-  }
-  if (company) {
-    update.company = company;
-  }
-  if (income) {
-    update.income = income;
-  }
-  if (degree) {
-    update.degree = degree;
-  }
-  if (gender) {
-    update.gender = gender;
-  }
-  if (dob) {
-    update.dob = dob;
-  }
-  if (location) {
-    update.location = location;
-  }
-  if (job) {
-    update.job = job;
-  }
-  if (college) {
-    update.college = college;
-  }
-  if (about) {
-    update.about = about;
-  }
-
-  if (name) {
-    update.name = name;
-  }
 
   try {
+    // Upload photo to S3
+    await s3.upload(params).promise();
+
+    // Update user in the database
     const user = await User.findOneAndUpdate(filter, update, { new: true });
+
     return res.json({ user });
   } catch (error) {
     // Handle error appropriately
@@ -506,6 +574,7 @@ exports.updateUserFields = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 // function getAge(DOB) {
 //   var today = new Date();
