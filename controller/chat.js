@@ -10,43 +10,140 @@ const { getMessaging } = require("firebase-admin/messaging")
 //   clientId,
 // });
 
+// exports.createChatRoom = async (req, res) => {
+//   try {
+//     var { participants, lastMessage } = req.body;
+
+//     console.log("Request Body:", req.body);
+
+//     var findChatRoom = await ChatRoom.find({ participants: participants });
+
+//     console.log("Existing Chat Rooms:", findChatRoom);
+
+//     if (findChatRoom && findChatRoom.length > 0) {
+//       console.log("Chat Room Already Exists");
+//       return res.json({ chatRoom: findChatRoom[0] });
+//     }
+
+//     var chatroomID = uuidv4();
+
+//     console.log("Creating new Chat Room with ID:", chatroomID);
+
+//     var chatRoom = new ChatRoom({
+//       chatroomID,
+//       participants,
+//       lastMessage,
+//     });
+
+//     console.log("New Chat Room Object:", chatRoom);
+
+//     await chatRoom.save();
+
+//     console.log("Chat Room Saved Successfully");
+
+//     return res.json({ chatRoom });
+//   } catch (err) {
+//     console.error("Error:", err);
+//     return res.status(400).json({ error: err.message });
+//   }
+// };
+const SimplePeer = require('simple-peer'); // Make sure to install 'simple-peer' npm package
+
 exports.createChatRoom = async (req, res) => {
   try {
-    var { participants, lastMessage } = req.body;
+    const { participants, lastMessage } = req.body;
 
     console.log("Request Body:", req.body);
 
-    var findChatRoom = await ChatRoom.find({ participants: participants });
+    const existingChatRoom = await ChatRoom.findOne({ participants: participants });
 
-    console.log("Existing Chat Rooms:", findChatRoom);
+    console.log("Existing Chat Room:", existingChatRoom);
 
-    if (findChatRoom && findChatRoom.length > 0) {
+    if (existingChatRoom) {
       console.log("Chat Room Already Exists");
-      return res.json({ chatRoom: findChatRoom[0] });
+      return res.json({ chatRoom: existingChatRoom });
     }
 
-    var chatroomID = uuidv4();
+    const chatroomID = uuidv4();
 
     console.log("Creating new Chat Room with ID:", chatroomID);
 
-    var chatRoom = new ChatRoom({
+    const newChatRoom = new ChatRoom({
       chatroomID,
       participants,
       lastMessage,
     });
 
-    console.log("New Chat Room Object:", chatRoom);
+    console.log("New Chat Room Object:", newChatRoom);
 
-    await chatRoom.save();
+    await newChatRoom.save();
 
     console.log("Chat Room Saved Successfully");
 
-    return res.json({ chatRoom });
+    // Emit Socket.IO event to notify connected clients about the new chat room
+    io.emit('chat room created', newChatRoom);
+
+    // Establish WebRTC connections between participants
+    establishWebRTCConnections(newChatRoom);
+
+    return res.json({ chatRoom: newChatRoom });
   } catch (err) {
     console.error("Error:", err);
     return res.status(400).json({ error: err.message });
   }
 };
+
+function establishWebRTCConnections(chatRoom) {
+  // For each pair of participants, initiate a WebRTC connection
+  for (let i = 0; i < chatRoom.participants.length; i++) {
+    for (let j = i + 1; j < chatRoom.participants.length; j++) {
+      const participantA = chatRoom.participants[i];
+      const participantB = chatRoom.participants[j];
+
+      // Create a WebRTC peer for A
+      const peerA = new SimplePeer({ initiator: true });
+
+      peerA.on('signal', (signalA) => {
+        // Send the signal to participant B
+        io.to(participantB).emit('call-signal', { signal: signalA, targetUserId: participantA });
+      });
+
+      // Create a WebRTC peer for B
+      const peerB = new SimplePeer();
+
+      peerB.on('signal', (signalB) => {
+        // Send the signal to participant A
+        io.to(participantA).emit('call-signal', { signal: signalB, targetUserId: participantB });
+      });
+
+      // Establish WebRTC connection when both participants exchange signals
+      peerA.on('connect', () => {
+        console.log(`WebRTC connection established between ${participantA} and ${participantB}`);
+      });
+
+      peerB.on('connect', () => {
+        console.log(`WebRTC connection established between ${participantA} and ${participantB}`);
+      });
+
+      // Handle incoming streams
+      peerA.on('stream', (stream) => {
+        // Broadcast the stream to both participants
+        io.to(participantA).emit('remote-stream', { stream, sender: participantB });
+        io.to(participantB).emit('remote-stream', { stream, sender: participantA });
+      });
+
+      peerB.on('stream', (stream) => {
+        // Broadcast the stream to both participants
+        io.to(participantA).emit('remote-stream', { stream, sender: participantB });
+        io.to(participantB).emit('remote-stream', { stream, sender: participantA });
+      });
+
+      // Save the peer instances to close them later
+      chatRoom.peers.push(peerA, peerB);
+    }
+  }
+}
+
 
 
 exports.getAllChatRoom = async (req, res) => {
@@ -57,6 +154,8 @@ exports.getAllChatRoom = async (req, res) => {
   if (chatRoom) {
     // var chat = await Chat.findOne({ recieveID: id, status: "SENT" });
     // if (chat) {
+      // getIO(req).emit('chatRoomUpdate', { chatRoom });
+
     await Chat.updateMany(
       { recieveID: id, status: "SENT" },
       { status: "DELIVERED" }
@@ -81,6 +180,8 @@ exports.getSingleChat = async (req, res) => {
     .sort({ createdAt: -1 });
   if (chat) {
     // var age = getAge(profile.dob);
+    // getIO(req).to(chatroomID).emit('newMessage', { chat });
+
     await Chat.updateMany(
       {
         $or: [
@@ -163,6 +264,11 @@ exports.sendSingleChat = (req, res) => {
         { _id: chatroomID },
         { lastMessage: msg, messageBy: senderID }
       );
+
+      // Emit Socket.IO event to notify connected clients about the new message
+      getIO(req).to(chatroomID).emit('newMessage', { chat });
+
+
       return res.json(chat);
       // update chatroom and if user is online send MQTT, if offline then send push notificiation
       // var params = {

@@ -221,6 +221,46 @@ exports.loginUser = async (req, res) => {
 };
 
 
+exports.changePassword = async (req, res) => {
+  const { currentPassword, newPassword, _id } = req.body;
+
+  try {
+    // Fetch the user from the database based on the user ID
+    const user = await User.findById(_id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log("cp",currentPassword)
+    console.log("np",newPassword)
+    // Compare the provided current password with the hashed password stored in the database
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ error: 'Invalid current password' });
+    }
+
+    // Hash the new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    console.log("hashedNewPassword",hashedNewPassword)
+    // Update the user's password in the database
+    user.password = newPassword;
+    console.log("userp",user.password)
+    await user.save();
+
+    // Create a new JWT token for the user with the updated password
+    const jwtToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRY,
+    });
+
+    return res.json({ message: 'Password changed successfully', jwtToken });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 
 exports.requireSignin = expressjwt({

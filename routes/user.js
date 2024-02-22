@@ -5,6 +5,7 @@ const {
   createUser,
   userExists,
   refreshToken,
+  changePassword,
   updateAdditionalDetails,
   requireSignin,
   checkError,
@@ -13,6 +14,7 @@ const {
 const router = express.Router();  
 
 router.post("/loginUser", loginUser);
+router.post("/changePassword", changePassword);
 router.post("/getAllUsers", getAllUsers, decodeToken,requireSignin);
 router.post("/createUser", createUser);
 router.post("/userExists", userExists);

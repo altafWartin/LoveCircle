@@ -5,6 +5,35 @@ const mongoose = require("mongoose");
 const sls = require("serverless-http");
 const { initializeApp, applicationDefault } = require("firebase-admin/app");
 const { getMessaging } = require("firebase-admin/messaging");
+const http = require('http');  // Add this line to import the http module
+
+const socketIO = require('socket.io');
+const bodyParser = require('body-parser'); // Import body-parser middleware
+
+
+const app = express();
+
+// Use CORS middleware
+// app.use(cors());
+// Allow requests from http://localhost:3000
+app.use(cors({ origin: 'http://localhost:3000' }));
+
+// app.use(cors({ origin: '*' }));
+
+const server = http.createServer(app);
+const io = socketIO(server);
+
+// Middleware to parse incoming JSON requests
+app.use(bodyParser.json());
+
+// Middleware to attach the io instance to the request object
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+
+
 
 // for FCM
 process.env.GOOGLE_APPLICATION_CREDENTIALS;
@@ -15,7 +44,7 @@ initializeApp({
   projectId: process.env.FIREBASE_PROJECT_ID,
 });
 
-const app = express();
+
 
 mongoose
   .connect(process.env.DATABASE_CLOUD)
@@ -50,6 +79,21 @@ app.use("/api", chatRoutes);
 //     console.log(`server is running on PORT ${port}`);
 //   });
 // }
+
+
+
+// ... (other server configurations)
+
+io.on('connection', (socket) => {
+  // Handle Socket.IO events here
+  console.log('A user connected');
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
+
+
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Server is running on port chek  ${port}`);
