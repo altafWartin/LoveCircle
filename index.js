@@ -103,6 +103,12 @@ app.get("/", async (req, res, next) => {
   res.status(200).send("Hello World!");
 });
 
+exports.handler = async (event) => {
+  console.log(event);
+  return 'Hello from Lambda!';
+};
+
+
 // if (process.env.AWS_LAMBDA == "true") module.exports.server = sls(app);
 // aws-cli keys
 // "",
