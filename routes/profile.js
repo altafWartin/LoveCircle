@@ -12,7 +12,7 @@ const upload = multer({ storage: storage });
 
 
 
-router.post("/getProfile", decodeToken, checkError,  getProfile);
+router.post("/getProfile",  checkError,  getProfile);
 router.post("/addLikeDislikeProfile", LikedOrNotProfile);
 router.post("/getLikedDislikeProfile",  checkError, decodeToken, getLikedDislikeProfile);
 router.post("/uploadImage", upload.single('photo'), uploadImage);
