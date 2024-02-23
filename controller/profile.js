@@ -29,101 +29,147 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// Assuming you have Notification model defined
+
+// const Notification = require('../models/profile/Notification');
+
 exports.LikedOrNotProfile = async (req, res) => {
-  var { userID, likedID, status } = req.body;
-  var likeDislikeProfile = new LikeDislikeRequested({
+  const { userID, likedID, status } = req.body;
+  const likeDislikeProfile = new LikeDislikeRequested({
     userID,
     likedID,
     status,
   });
-  if (status == 0) {
-    //then send Notification
-    var user = await User.findOne({ _id: likedID });
-    const receivedToken = user.device_tokens;
-    for (let i = 0; i < receivedToken.length; i++) {
+
+  console.log(status,"status");
+
+  try {
+    if (status == 0) {
+      // Send Notification
+
+      console.log(status);
+      const user = await User.findOne({ _id: likedID });
+      
+      const receivedToken = user.device_tokens;
+
+      // const commenterName =  _id.name; // Replace this with the actual commenter's name
+
+
+      const notification = new Notification({
+        userId: userID,
+        title: 'Hey! Good Newzz',
+        body: ` recently Liked your profile. If you like their profile, you can start chatting`,
+        likedID: likedID,
+        // commenterName: commenterName,
+        createdAt: Date.now(),
+      });
+
+      await notification.save();
+
+      console.log('Notification Sent:', notification);
+
+      // for (let i = 0; i < receivedToken.length; i++) {
+      //   const notification = new Notification({
+      //     userId: likedID,
+      //     title: 'Hey! Good Newzz',
+      //     body: 'Someone recently Liked your profile. If you like their profile, you can start chatting',
+      //     // imageUrl: 'https://media.istockphoto.com/id/178640157/photo/halloween-monster.jpg?s=612x612&w=0&k=20&c=8bXRPczSeB9Vmi4sZHHRUUO7wgfDpwEkniuO-_puhRs=',
+      //     data: {
+      //       context: 'likes',
+      //     },
+      //     createdAt: Date.now(),
+      //   });
+
+      //   await notification.save();
+
+      //   const message = {
+      //     notification: {
+      //       title: notification.title,
+      //       body: notification.body,
+      //     },
+      //     android: {
+      //       notification: {
+      //         icon: 'launcher_icon',
+      //         color: '#7e55c3',
+      //         default_sound: true,
+      //         priority: 'high',
+      //       },
+      //     },
+      //     data: {
+      //       context: notification.data.context,
+      //     },
+      //     token: receivedToken[i],
+      //   };
+
+      //   try {
+      //     const response = await getMessaging().send(message);
+      //     console.log('Successfully sent message:', response);
+      //   } catch (error) {
+      //     console.error('Error sending message:', error);
+      //   }
+      // }
+    }
+
+    const profileExists = await LikeDislikeRequested.findOne({
+      $and: [{ userID: userID }, { likedID: likedID }],
+    });
+
+    if (profileExists == null) {
+      const savedProfile = await likeDislikeProfile.save();
+      console.log('Profile Saved:', savedProfile);
+      return res.json(savedProfile);
+    } else {
+      console.log('Profile Already Exists:', profileExists);
+      return res.json(profileExists);
+    }
+  } catch (error) {
+    console.error('Error processing LikedOrNotProfile:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+// Define the API endpoint function
+exports.getLikedDislikeProfile = async (req, res) => {
+  const { userID, status } = req.body;
+
+  try {
+    const likedProfiles = await LikeDislikeRequested.find({
+      likedID: userID,
+      status: status,
+    }).populate({
+      path: "userID",
+      select: { name: 1, images: 1, dob: 1, device_tokens: 1 }, // Include device tokens for push notification
+    });
+
+    // Send push notification for each like
+    likedProfiles.forEach(async (like) => {
+      const { name, device_tokens } = like.userID;
+
       const message = {
         notification: {
-          title: "Hey! Good Newzz",
-          body: "Someone recently Liked your profile. if you like their profile then you can start chatting",
-          // imageUrl: 'https://media.istockphoto.com/id/178640157/photo/halloween-monster.jpg?s=612x612&w=0&k=20&c=8bXRPczSeB9Vmi4sZHHRUUO7wgfDpwEkniuO-_puhRs=',
+          title: "New Like",
+          body: `${name} liked your profile.`,
         },
-        android: {
-          notification: {
-            icon: "launcher_icon",
-            color: "#7e55c3",
-            default_sound: true,
-            priority: "high",
-          },
-        },
-        data: {
-          context: "likes",
-        },
-        token: receivedToken[i],
+        tokens: device_tokens, // Array of device tokens
       };
 
-      getMessaging()
-        .send(message)
-        .then((response) => {
-          // res.status(200).json({
-          //   message: "Successfully sent message",
-          //   token: receivedToken,
-          // });
-          console.log("Successfully sent message:", response);
-        })
-        .catch(async (error) => {
-          // remove deleted token
-          await User.findOneAndUpdate(
-            { _id: likedID },
-            { $pull: { device_tokens: receivedToken[i] } }
-          );
-          // console.log("remove :- " + receivedToken[i]);
-          // res.status(400);
-          // res.send(error);
-          console.log("Error sending message:", error);
-        });
-    }
-  }
-  var profileExists = await LikeDislikeRequested.findOne({
-    $and: [{ userID: userID }, { likedID: likedID }],
-  });
-  if (profileExists == null) {
-    likeDislikeProfile.save().then((profile) => {
-      return res.json(profile);
+      try {
+        const response = await getMessaging().sendMulticast(message);
+        console.log("Successfully sent message:", response);
+      } catch (error) {
+        console.error("Error sending like notification:", error);
+      }
     });
-  } else {
-    return res.json(profileExists);
+
+    return res.json({ likedProfiles });
+  } catch (error) {
+    console.error("Error retrieving liked profiles:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-exports.getLikedDislikeProfile = async (req, res) => {
-  var { userID, likedID, status } = req.body;
-  var likedDislikeProfile = await LikeDislikeRequested.find({
-    likedID: userID,
-    status: status,
-  }).populate({
-    path: "likedID",
-    select: { name: 1, images: 1, dob: 1 },
-    // populate: {
-    //   path: "basic_Info",
-    //   model: "Basic_Info",
-    //   select: {
-    //     sun_sign: 1,
-    //     cuisine: 1,
-    //     political_views: 1,
-    //     looking_for: 1,
-    //     personality: 1,
-    //     first_date: 1,
-    //     drink: 1,
-    //     smoke: 1,
-    //     religion: 1,
-    //     fav_pastime: 1,
-    //   },
-    // },
-  });
-  if (likedDislikeProfile) {
-    return res.json({ likedDislikeProfile });
-  }
-};
 
 const AWS = require("aws-sdk");
 
@@ -238,16 +284,11 @@ exports.uploadImage = async (req, res) => {
   }
 };
 
-
-
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   region: process.env.AWS_BUCKET_REGION,
 });
-
-
-
 
 // Function to check if a string is a valid URL
 function isValidUrl(string) {
@@ -258,15 +299,89 @@ function isValidUrl(string) {
     return false;
   }
 }
+const Notification = require("../models/profile/Notification"); // Adjust the path based on your file structure
 
 
+// controller/profile.js (or wherever you retrieve notifications)
+exports.GetNotifications = async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+    const notifications = await Notification.find({ userId })
+      .sort({ createdAt: 'desc' })
+      // .populate('commenterId', 'name') // Populate commenterId with 'name' field
+      .exec();
+
+    return res.json({ notifications });
+  } catch (error) {
+    console.error('Error retrieving notifications:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+// controller/profile.js
+const Comment = require('../models/profile/comment'); // Adjust the path accordingly
+
+// ... other imports ...
+
+exports.AddComment = async (req, res) => {
+  const { userId, commenterId, imageUrl, text } = req.body;
+
+  try {
+    const newComment = new Comment({
+      userId,
+      commenterId,
+      imageUrl,
+      text,
+    });
+
+    const savedComment = await newComment.save();
+
+    // Create a new notification for the user whose image received a comment
+    const newNotification = new Notification({
+      userId,
+      commenterId,
+      imageUrl,
+      title: 'New Comment',
+      body: `some one commented on your image: ${text}`,
+    });
+
+    await newNotification.save(); // Save the notification to the database
+
+    return res.json({ comment: savedComment });
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+exports.GetComment = async (req, res) => {
+  const { userId, imageUrl } = req.body;
+
+  try {
+    const comments = await Comment.find({ userId, imageUrl }).sort({
+      createdAt: "desc",
+    });
+
+    return res.json({ comments });
+  } catch (error) {
+    console.error("Error retrieving comments:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
 
 exports.replaceImage = async (req, res) => {
   try {
-    const { id, oldPhotoURL, index=1 } = req.body;
+    const { id, oldPhotoURL, index = 1 } = req.body;
     const newPhoto = req.file;
 
-    console.log("Received replaceImage request:", { id, oldPhotoURL, newPhoto, index });
+    console.log("Received replaceImage request:", {
+      id,
+      oldPhotoURL,
+      newPhoto,
+      index,
+    });
 
     if (!id || !isValidUrl(oldPhotoURL) || isNaN(index)) {
       console.log("Invalid request parameters");
@@ -317,11 +432,15 @@ exports.replaceImage = async (req, res) => {
             });
           } else {
             console.log("findOneAndUpdate not working");
-            return res.status(500).json({ error: "findOneAndUpdate not working" });
+            return res
+              .status(500)
+              .json({ error: "findOneAndUpdate not working" });
           }
         } catch (uploadError) {
           console.error("Error uploading image to AWS S3:", uploadError);
-          return res.status(500).json({ error: "Error uploading image to AWS S3" });
+          return res
+            .status(500)
+            .json({ error: "Error uploading image to AWS S3" });
         }
       } catch (error) {
         console.error("Error:", error);
@@ -329,14 +448,15 @@ exports.replaceImage = async (req, res) => {
       }
     } else {
       console.log("Error: User not found or error updating user document");
-      return res.status(500).json({ error: "Error removing old image from DB" });
+      return res
+        .status(500)
+        .json({ error: "Error removing old image from DB" });
     }
   } catch (error) {
     console.error("Error processing image replace request:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 
 
 exports.getSingleProfile = async (req, res) => {
@@ -507,8 +627,6 @@ exports.updateRequestStatus = async (req, res) => {
 //   }
 // };
 
-
-
 exports.updateUserFields = async (req, res) => {
   const {
     name,
@@ -528,8 +646,6 @@ exports.updateUserFields = async (req, res) => {
   // Photo upload parameters
   const profile = req.file; // Assuming you are using middleware like multer for file upload
   const profileKey = `profiles/${_id}_${Date.now()}_${profile.originalname}`;
-
-
 
   const params = {
     Bucket: process.env.AWS_BUCKET_NAME,
@@ -554,8 +670,8 @@ exports.updateUserFields = async (req, res) => {
     ...(college && { college }),
     ...(about && { about }),
     ...(name && { name }),
-    ...(profile && { profilePhoto: uploadResult.Location })
-     // Add a field to store the photo key in the user document
+    ...(profile && { profilePhoto: uploadResult.Location }),
+    // Add a field to store the photo key in the user document
   };
   console.log(update);
   const filter = { _id: _id };
@@ -574,7 +690,6 @@ exports.updateUserFields = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 
 // function getAge(DOB) {
 //   var today = new Date();
