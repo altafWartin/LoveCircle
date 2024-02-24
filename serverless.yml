@@ -6,7 +6,6 @@ provider:
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
   environment:
-    NODE_ENV: ${self:custom.secrets.NODE_ENV}
     APP_NAME: ${self:custom.secrets.APP_NAME}
     CLIENT_URL: ${self:custom.secrets.CLIENT_URL}
     DATABASE_CLOUD: ${self:custom.secrets.DATABASE_CLOUD}
@@ -33,9 +32,11 @@ functions:
           cors: true
 
 custom:
+  port: 3000
+
   secrets:
     NODE_ENV: "development"
-    APP_NAME: "LoveCircle.com"
+    APP_NAME: "LovecircO Dating App"
     CLIENT_URL: "http://localhost:3000"
     DATABASE_CLOUD: "mongodb+srv://abhishek:Abhishek@cluster0.3vtjr48.mongodb.net/?retryWrites=true&w=majority"
     JWT_SECRET: "432904ui3hi8h3DateMadly.com1997Sood3h9279HK"
@@ -46,3 +47,10 @@ custom:
     AWS_SECRET_KEYS: "ORw95RrXygafXhTmbwOB3CRZdvbJa5aWYO1iKAB0"
     AWS_BUCKET_REGION: "eu-north-1"
     FIREBASE_PROJECT_ID: "datemadly"
+
+
+
+
+    # "UserId": "AIDA6ODU7NJLTNVETMRVA",
+    # "Account": "992382773847",
+    # "Arn": "arn:aws:iam::992382773847:user/LoveCircle"

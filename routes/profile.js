@@ -8,7 +8,8 @@ const {
   getProfile,
   LikedOrNotProfile,
   AddComment,
-    GetComment,
+  GetComment,
+  getFilterProfile,
   GetNotifications,
   getLikedDislikeProfile,
   uploadImage,
@@ -26,6 +27,7 @@ const storage = multer.memoryStorage(); // Use memory storage for storing file b
 const upload = multer({ storage: storage });
 
 router.post("/getProfile", checkError, getProfile);
+router.post("/getFilterProfile", checkError, getFilterProfile);
 router.post("/addLikeDislikeProfile", LikedOrNotProfile);
 router.post("/addComment", AddComment);
 router.post("/getComment", GetComment);

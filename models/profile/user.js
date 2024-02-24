@@ -14,10 +14,12 @@ const userSchema = mongoose.Schema(
     profilePhoto: { type: String },
     profileScore: { type: Number, default: 50 },
     phoneNo: { type: Number, index: true },
-    // loc: {
-    //   type: { type: String },
-    //   coordinates: [Number],
-    // },
+    gender: String,
+  loc: {
+    type: { type: String },
+    coordinates: [Number]
+  },
+  dob: Date,
     height: { type: Number},
     live: { type: String },
     belongTo: { type: String },

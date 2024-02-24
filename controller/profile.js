@@ -1,6 +1,9 @@
 const User = require("../models/profile/user");
 const LikeDislikeRequested = require("../models/profile/like_dislike_requested");
 const LikeDislikeStatus = require("../models/profile/like_dislike_status");
+
+const Notification = require("../models/profile/Notification");
+
 var crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
 
@@ -29,107 +32,114 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// Assuming you have Notification model defined
 
-// const Notification = require('../models/profile/Notification');
 
-exports.LikedOrNotProfile = async (req, res) => {
-  const { userID, likedID, status } = req.body;
-  const likeDislikeProfile = new LikeDislikeRequested({
-    userID,
-    likedID,
-    status,
-  });
-
-  console.log(status,"status");
-
+exports.getFilterProfile = async (req, res) => {
   try {
-    if (status == 0) {
-      // Send Notification
+    const { gender, location, distance, minAge, maxAge } = req.body;
 
-      console.log(status);
-      const user = await User.findOne({ _id: likedID });
-      
-      const receivedToken = user.device_tokens;
+    let query = {};
 
-      // const commenterName =  _id.name; // Replace this with the actual commenter's name
-
-
-      const notification = new Notification({
-        userId: userID,
-        title: 'Hey! Good Newzz',
-        body: ` recently Liked your profile. If you like their profile, you can start chatting`,
-        likedID: likedID,
-        // commenterName: commenterName,
-        createdAt: Date.now(),
-      });
-
-      await notification.save();
-
-      console.log('Notification Sent:', notification);
-
-      // for (let i = 0; i < receivedToken.length; i++) {
-      //   const notification = new Notification({
-      //     userId: likedID,
-      //     title: 'Hey! Good Newzz',
-      //     body: 'Someone recently Liked your profile. If you like their profile, you can start chatting',
-      //     // imageUrl: 'https://media.istockphoto.com/id/178640157/photo/halloween-monster.jpg?s=612x612&w=0&k=20&c=8bXRPczSeB9Vmi4sZHHRUUO7wgfDpwEkniuO-_puhRs=',
-      //     data: {
-      //       context: 'likes',
-      //     },
-      //     createdAt: Date.now(),
-      //   });
-
-      //   await notification.save();
-
-      //   const message = {
-      //     notification: {
-      //       title: notification.title,
-      //       body: notification.body,
-      //     },
-      //     android: {
-      //       notification: {
-      //         icon: 'launcher_icon',
-      //         color: '#7e55c3',
-      //         default_sound: true,
-      //         priority: 'high',
-      //       },
-      //     },
-      //     data: {
-      //       context: notification.data.context,
-      //     },
-      //     token: receivedToken[i],
-      //   };
-
-      //   try {
-      //     const response = await getMessaging().send(message);
-      //     console.log('Successfully sent message:', response);
-      //   } catch (error) {
-      //     console.error('Error sending message:', error);
-      //   }
-      // }
+    if (gender) {
+      query.gender = gender;
     }
 
+    if (location && distance) {
+      const [longitude, latitude] = location.split(",").map(parseFloat);
+
+      query.loc = {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [longitude, latitude],
+          },
+          $maxDistance: parseFloat(distance) * 1000,
+        },
+      };
+    }
+
+    if (minAge || maxAge) {
+      query.dob = {};
+
+      if (minAge) {
+        const minBirthYear = new Date().getFullYear() - parseInt(minAge, 10);
+        query.dob.$gte = new Date(`${minBirthYear}-01-01T00:00:00.000Z`);
+      }
+
+      if (maxAge) {
+        const maxBirthYear = new Date().getFullYear() - parseInt(maxAge, 10);
+        query.dob.$lte = new Date(`${maxBirthYear}-12-31T23:59:59.999Z`);
+      }
+    }
+
+    const filteredUsers = await User.find(query);
+
+    res.json({ success: true, data: filteredUsers });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+};
+
+// LikedOrNotProfile route handler
+exports.LikedOrNotProfile = async (req, res) => {
+  try {
+    // Destructure request body
+    const { userID, likedID, status } = req.body;
+
+    // Create a new instance of LikeDislikeRequested model
+    const likeDislikeProfile = new LikeDislikeRequested({
+      userID,
+      likedID,
+      status,
+    });
+
+    console.log(status, "status");
+
+    // Check if the profile already exists
     const profileExists = await LikeDislikeRequested.findOne({
       $and: [{ userID: userID }, { likedID: likedID }],
     });
 
-    if (profileExists == null) {
+    if (profileExists === null) {
+      if (status === 0) {
+        // Send Notification
+        console.log(status);
+
+        // Query for the user with likedID
+        const user = await User.findOne({ _id: likedID });
+
+        // Check if the user exists
+        if (user) {
+          // Create a new notification for the user whose profile was liked
+          const newNotification = new Notification({
+            userId: likedID,
+            title: "Hey! Good News",
+            body: `${userID} recently liked your profile. If you like their profile, you can start chatting.`,
+          });
+
+          // Save the notification to the database
+          await newNotification.save();
+
+          return res.status(201).json({ Notification: newNotification });
+        } else {
+          return res.status(404).json({ error: "Liked user not found" });
+        }
+      }
+
+      // Save the new profile
       const savedProfile = await likeDislikeProfile.save();
-      console.log('Profile Saved:', savedProfile);
-      return res.json(savedProfile);
+      console.log("Profile Saved:", savedProfile);
+      return res.status(201).json(savedProfile);
     } else {
-      console.log('Profile Already Exists:', profileExists);
-      return res.json(profileExists);
+      console.log("Profile Already Exists:", profileExists);
+      return res.status(200).json(profileExists);
     }
   } catch (error) {
-    console.error('Error processing LikedOrNotProfile:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error processing LikedOrNotProfile:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
-
-
 // Define the API endpoint function
 exports.getLikedDislikeProfile = async (req, res) => {
   const { userID, status } = req.body;
@@ -169,7 +179,6 @@ exports.getLikedDislikeProfile = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 
 const AWS = require("aws-sdk");
 
@@ -299,8 +308,6 @@ function isValidUrl(string) {
     return false;
   }
 }
-const Notification = require("../models/profile/Notification"); // Adjust the path based on your file structure
-
 
 // controller/profile.js (or wherever you retrieve notifications)
 exports.GetNotifications = async (req, res) => {
@@ -308,20 +315,19 @@ exports.GetNotifications = async (req, res) => {
 
   try {
     const notifications = await Notification.find({ userId })
-      .sort({ createdAt: 'desc' })
+      .sort({ createdAt: "desc" })
       // .populate('commenterId', 'name') // Populate commenterId with 'name' field
       .exec();
 
     return res.json({ notifications });
   } catch (error) {
-    console.error('Error retrieving notifications:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error retrieving notifications:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-
 // controller/profile.js
-const Comment = require('../models/profile/comment'); // Adjust the path accordingly
+const Comment = require("../models/profile/comment"); // Adjust the path accordingly
 
 // ... other imports ...
 
@@ -343,7 +349,7 @@ exports.AddComment = async (req, res) => {
       userId,
       commenterId,
       imageUrl,
-      title: 'New Comment',
+      title: "New Comment",
       body: `some one commented on your image: ${text}`,
     });
 
@@ -457,7 +463,6 @@ exports.replaceImage = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 
 exports.getSingleProfile = async (req, res) => {
   var { _id } = req.body;
