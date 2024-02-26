@@ -1,0 +1,56 @@
+service: lovecircle-serverless-app
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  environment:
+    APP_NAME: ${self:custom.secrets.APP_NAME}
+    CLIENT_URL: ${self:custom.secrets.CLIENT_URL}
+    DATABASE_CLOUD: ${self:custom.secrets.DATABASE_CLOUD}
+    JWT_SECRET: ${self:custom.secrets.JWT_SECRET}
+    JWT_EXPIRY: ${self:custom.secrets.JWT_EXPIRY}
+    AWS_LAMBDA: ${self:custom.secrets.AWS_LAMBDA}
+    AWS_BUCKET_NAME: ${self:custom.secrets.AWS_BUCKET_NAME}
+    AWS_ACCESS_KEYS: ${self:custom.secrets.AWS_ACCESS_KEYS}
+    AWS_SECRET_KEYS: ${self:custom.secrets.AWS_SECRET_KEYS}
+    AWS_BUCKET_REGION: ${self:custom.secrets.AWS_BUCKET_REGION}
+    FIREBASE_PROJECT_ID: ${self:custom.secrets.FIREBASE_PROJECT_ID}
+
+functions:
+  server:
+    handler: index.server
+    events:
+      - http:
+          path: /
+          method: ANY
+          cors: true
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
+
+custom:
+  port: 3000
+
+  secrets:
+    NODE_ENV: "development"
+    APP_NAME: "LovecircO Dating App"
+    CLIENT_URL: "http://localhost:3000"
+    DATABASE_CLOUD: "mongodb+srv://abhishek:Abhishek@cluster0.3vtjr48.mongodb.net/?retryWrites=true&w=majority"
+    JWT_SECRET: "432904ui3hi8h3DateMadly.com1997Sood3h9279HK"
+    JWT_EXPIRY: "90 days"
+    AWS_LAMBDA: "false"
+    AWS_BUCKET_NAME: "love-circle-images"
+    AWS_ACCESS_KEYS: "AKIA6ODU7NJL6FSH4E6T"
+    AWS_SECRET_KEYS: "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"
+    AWS_BUCKET_REGION: "eu-north-1"
+    FIREBASE_PROJECT_ID: "datemadly"
+
+
+
+
+    # "UserId": "AIDA6ODU7NJLTNVETMRVA",
+    # "Account": "992382773847",
+    # "Arn": "arn:aws:iam::992382773847:user/LoveCircle"
