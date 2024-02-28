@@ -637,57 +637,33 @@ exports.updateRequestStatus = async (req, res) => {
 
 exports.updateUserFields = async (req, res) => {
   const {
-    name,
-    designation,
-    company,
-    income,
     _id,
-    degree,
-    gender,
+    name,
     dob,
+    gender,
     location,
     job,
+    company,
     college,
     about,
   } = req.body;
 
-  // Photo upload parameters
-  const profile = req.file; // Assuming you are using middleware like multer for file upload
-  const profileKey = `profiles/${_id}_${Date.now()}_${profile.originalname}`;
-
-  const params = {
-    Bucket: process.env.AWS_BUCKET_NAME,
-    Key: profileKey,
-    Body: profile.buffer,
-  };
-
-  // Attempt S3 upload
-  const uploadResult = await s3.upload(params).promise();
-  console.log("Image uploaded to AWS S3:", uploadResult);
-
   // Update fields
   const update = {
-    ...(designation && { designation }),
-    ...(company && { company }),
-    ...(income && { income }),
-    ...(degree && { degree }),
-    ...(gender && { gender }),
-    ...(dob && { dob }),
-    ...(location && { location }),
-    ...(job && { job }),
-    ...(college && { college }),
-    ...(about && { about }),
-    ...(name && { name }),
-    ...(profile && { profilePhoto: uploadResult.Location }),
+    name,
+    dob,
+    gender,
+    location,
+    job,
+    company,
+    college,
+    about,
     // Add a field to store the photo key in the user document
   };
-  console.log(update);
+
   const filter = { _id: _id };
 
   try {
-    // Upload photo to S3
-    await s3.upload(params).promise();
-
     // Update user in the database
     const user = await User.findOneAndUpdate(filter, update, { new: true });
 
@@ -698,6 +674,7 @@ exports.updateUserFields = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 // function getAge(DOB) {
 //   var today = new Date();

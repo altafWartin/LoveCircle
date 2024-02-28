@@ -37,6 +37,6 @@ router.post("/uploadImage", upload.single("photo"), uploadImage);
 router.post("/replaceImage", upload.single("newPhoto"), replaceImage);
 router.post("/getSingleProfile", getSingleProfile);
 router.post("/updateRequestStatus", updateRequestStatus);
-router.post("/updateUserFields", upload.single("profile"), updateUserFields);
+router.post("/updateUserFields", updateUserFields);
 
 module.exports = router;
