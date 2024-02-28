@@ -475,9 +475,8 @@ exports.getSingleProfile = async (req, res) => {
       "basic_Info",
       "sun_sign cuisine political_views looking_for personality first_date drink smoke religion fav_pastime"
     )
-    .select(
-      "name images height live dob email designation income degree company email phoneNo"
-    );
+    .select("name email password  images profilePhoto profileScore phoneNo gender loc dob height live belongTo relationStatus degree institute designation gender dob company location job college about income  basic_Info")
+
   if (profile) {
     return res.json({ profile });
   } else {

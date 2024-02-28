@@ -15,12 +15,12 @@ const userSchema = mongoose.Schema(
     profileScore: { type: Number, default: 50 },
     phoneNo: { type: Number, index: true },
     gender: String,
-  loc: {
-    type: { type: String },
-    coordinates: [Number]
-  },
-  dob: Date,
-    height: { type: Number},
+    loc: {
+      type: { type: String },
+      coordinates: [Number],
+    },
+    dob: Date,
+    height: { type: Number },
     live: { type: String },
     belongTo: { type: String },
     relationStatus: { type: String },
@@ -29,10 +29,10 @@ const userSchema = mongoose.Schema(
     designation: { type: String },
     gender: { type: String },
     dob: { type: Date },
-    company: { type: String },        ///
-    location:{type: String },         ///
-    job: { type: String },           ///
-    college: { type: String },      ///
+    company: { type: String }, ///
+    location: { type: String }, ///
+    job: { type: String }, ///
+    college: { type: String }, ///
     about: { type: String }, ///
     income: { type: String },
     describe: [{ type: String }],
@@ -50,9 +50,6 @@ const userSchema = mongoose.Schema(
 );
 userSchema.index({ loc: "2dsphere" });
 
-
-
-
 // Hash the password before saving it to the database
 userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
@@ -63,9 +60,8 @@ userSchema.pre("save", async function (next) {
 });
 
 // Method to compare the provided password with the stored hashed password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
-
 
 module.exports = mongoose.model("User", userSchema);
