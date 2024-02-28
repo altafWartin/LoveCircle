@@ -36,7 +36,9 @@ exports.getProfile = async (req, res) => {
 
 exports.getFilterProfile = async (req, res) => {
   try {
-    const { gender, location, distance, minAge, maxAge } = req.body;
+    const { gender,
+      location, distance, minAge, maxAge
+    } = req.body;
 
     let query = {};
 
@@ -74,7 +76,9 @@ exports.getFilterProfile = async (req, res) => {
 
     const filteredUsers = await User.find(query);
 
-    res.json({ success: true, data: filteredUsers });
+    // res.json({ data: filteredUsers });
+    return res.json({ users : filteredUsers });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
