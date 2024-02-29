@@ -149,7 +149,7 @@ function establishWebRTCConnections(chatRoom) {
 exports.getAllChatRoom = async (req, res) => {
   var { id } = req.body;
   var chatRoom = await ChatRoom.find({ participants: { $all: [id] } })
-    .populate("participants", "_id images name isOnline updatedAt")
+    .populate("participants", "_id images name email isOnline updatedAt")
     .sort({ updatedAt: -1 });
   if (chatRoom) {
     // var chat = await Chat.findOne({ recieveID: id, status: "SENT" });
