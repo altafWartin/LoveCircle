@@ -32,13 +32,9 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-
-
 exports.getFilterProfile = async (req, res) => {
   try {
-    const { gender,
-      location, distance, minAge, maxAge
-    } = req.body;
+    const { gender, location, distance, minAge, maxAge } = req.body;
 
     let query = {};
 
@@ -77,8 +73,7 @@ exports.getFilterProfile = async (req, res) => {
     const filteredUsers = await User.find(query);
 
     // res.json({ data: filteredUsers });
-    return res.json({ users : filteredUsers });
-
+    return res.json({ users: filteredUsers });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
@@ -154,7 +149,7 @@ exports.getLikedDislikeProfile = async (req, res) => {
       status: status,
     }).populate({
       path: "userID",
-      select: { name: 1, images: 1, dob: 1, device_tokens: 1 }, // Include device tokens for push notification
+      select: { name: 1, images: 1, dob: 1, email: 1 }, // Include device tokens for push notification
     });
 
     // Send push notification for each like
@@ -170,8 +165,7 @@ exports.getLikedDislikeProfile = async (req, res) => {
       };
 
       try {
-        const response = await getMessaging().sendMulticast(message);
-        console.log("Successfully sent message:", response);
+        const response = await getMessaging();
       } catch (error) {
         console.error("Error sending like notification:", error);
       }
@@ -475,7 +469,9 @@ exports.getSingleProfile = async (req, res) => {
       "basic_Info",
       "sun_sign cuisine political_views looking_for personality first_date drink smoke religion fav_pastime"
     )
-    .select("name email password  images profilePhoto profileScore phoneNo gender loc dob height live belongTo relationStatus degree institute designation gender dob company location job college about income  basic_Info")
+    .select(
+      "name email password  images profilePhoto profileScore phoneNo gender loc dob height live belongTo relationStatus degree institute designation gender dob company location job college about income  basic_Info"
+    );
 
   if (profile) {
     return res.json({ profile });
@@ -485,68 +481,94 @@ exports.getSingleProfile = async (req, res) => {
 };
 
 exports.updateRequestStatus = async (req, res) => {
-  var { userID, likedID, status } = req.body;
-  var likeDislikeProfile = new LikeDislikeStatus({ userID, likedID, status });
-  likeDislikeProfile.save().then(async (profile) => {
-    if (status === 1) {
-      // declined and delete from Like_Dislike_Requested
-      var value = await LikeDislikeRequested.deleteOne({
-        userID: userID,
-        likedID: likedID,
-      });
-      console.log(value);
-      return res.json(profile);
-    } else {
-      //accepted then create chatroom and delete from Like_Dislike_Requested
-      var participants = [userID, likedID];
-      console.log(participants);
-      var findChatRoom = await ChatRoom.find({ participants: participants });
-      console.log("find " + findChatRoom.toString());
-      if (findChatRoom != "") {
-        console.log("chatroom exists" + findChatRoom);
-        return res.json(profile);
-      } else {
-        var chatroomID = uuidv4();
-        var lastMessage = "Hey I liked your profile too...";
+  try {
+    var { userID, likedID, status, requestID } = req.body;
 
-        var chatRoom = new ChatRoom({
-          chatroomID,
-          participants,
-          lastMessage,
-        });
-
-        chatRoom
-          .save()
-          .then((chat) => {
-            // create Message to chat
-            status = "SENT";
-            var senderID = userID;
-            var recieveID = likedID;
-            var msg = lastMessage;
-            var messageID = chatroomID;
-            var chatroomID = chat._id;
-            var chat = new Chat({
-              senderID,
-              msg,
-              messageID,
-              chatroomID,
-              status,
-              recieveID,
-            });
-            chat.save().then(async (chat) => {
-              await LikeDislikeRequested.deleteOne({
-                userID: userID,
-                likedID: likedID,
-              });
-              return res.json(profile);
-            });
-          })
-          .catch((err) => {
-            return res.status(400).json({ error: err });
-          });
-      }
+    if (!userID || !likedID || !status || !requestID) {
+      console.log("Invalid request parameters");
+      return res.status(400).json({ error: "Invalid request parameters" });
     }
-  });
+
+    if (status == 1) {
+      // declined and delete from Like_Dislike_Requested
+      // Check for Request Existence
+      var existingRequest = await LikeDislikeRequested.findById(requestID);
+      if (!existingRequest) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      // Delete the request using requestID
+      var deleteRequestResult = await LikeDislikeRequested.deleteOne({
+        _id: requestID,
+      });
+
+      console.log(" Reject and Delete Request Result:", deleteRequestResult);
+
+      return res.json({
+        success: true,
+        message: "Request rejected successfully.",
+        likedProfiles: filteredLikedProfiles,
+      });
+    } else {
+      // Accepted then create chatroom and delete from Like_Dislike_Requested
+      var participants = [userID, likedID];
+      console.log("Participants:", participants);
+
+      var findChatRoom = await ChatRoom.find({ participants: participants });
+
+      console.log("Find Chat Room:", findChatRoom.toString());
+
+      var chatroomID = uuidv4();
+      var lastMessage = "Hey, I liked your profile too...";
+
+      var chatRoom = new ChatRoom({
+        chatroomID,
+        participants,
+        lastMessage,
+      });
+
+      await chatRoom.save();
+
+      // Create Message to chat
+      status = "SENT";
+      var senderID = userID;
+      var recieveID = likedID;
+      var msg = lastMessage;
+      var messageID = chatroomID;
+
+      var chat = new Chat({
+        senderID,
+        msg,
+        messageID,
+        chatroomID: chatRoom._id,
+        status,
+        recieveID,
+      });
+
+      await chat.save();
+
+      // Check for Request Existence
+      var existingRequest = await LikeDislikeRequested.findById(requestID);
+      if (!existingRequest) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      // Delete the request using requestID
+      var deleteRequestResult = await LikeDislikeRequested.deleteOne({
+        _id: requestID,
+      });
+
+      console.log("Accept and Delete Request Result:", deleteRequestResult);
+
+      return res.json({
+        success: true,
+        message: "Request accepted successfully.",
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 };
 
 // exports.updateUserFields = async (req, res) => {
@@ -636,17 +658,8 @@ exports.updateRequestStatus = async (req, res) => {
 // };
 
 exports.updateUserFields = async (req, res) => {
-  const {
-    _id,
-    name,
-    dob,
-    gender,
-    location,
-    job,
-    company,
-    college,
-    about,
-  } = req.body;
+  const { _id, name, dob, gender, location, job, company, college, about } =
+    req.body;
 
   // Update fields
   const update = {
@@ -674,7 +687,6 @@ exports.updateUserFields = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 
 // function getAge(DOB) {
 //   var today = new Date();
