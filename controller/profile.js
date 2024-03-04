@@ -32,53 +32,133 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+
+
 exports.getFilterProfile = async (req, res) => {
   try {
-    const { gender, location, distance, minAge, maxAge } = req.body;
+    // Extracting parameters from the request body
+    const { gender, longitude, latitude, distance, minAge, maxAge } = req.body;
 
+    // Initializing an empty query object
     let query = {};
 
+    console.log("Received request with filters:");
+    console.log("Gender:", gender);
+    console.log("Longitude:", longitude);
+    console.log("Latitude:", latitude);
+    console.log("Distance:", distance);
+    console.log("Min Age:", minAge);
+    console.log("Max Age:", maxAge);
+
+    // Adding gender filter to the query if gender is provided
     if (gender) {
       query.gender = gender;
     }
 
-    if (location && distance) {
-      const [longitude, latitude] = location.split(",").map(parseFloat);
-
+    // Adding location filter to the query if longitude, latitude, and distance are provided
+    if (longitude && latitude && distance) {
       query.loc = {
         $near: {
           $geometry: {
             type: "Point",
-            coordinates: [longitude, latitude],
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          $maxDistance: parseFloat(distance) * 1000,
+          $maxDistance: distance * 1000, // Keep distance in kilometers
         },
       };
+      console.log("Query with location:", query.loc);
     }
+
+    // Finding all users in the database
+    const allUsers = await User.find();
+
+    // Log the number of all users
+    console.log("All Users:", allUsers.length);
+
+    // Filter users based on age if minAge or maxAge are provided
+    let filteredUsers = allUsers;
 
     if (minAge || maxAge) {
-      query.dob = {};
+      const currentDate = new Date();
 
-      if (minAge) {
-        const minBirthYear = new Date().getFullYear() - parseInt(minAge, 10);
-        query.dob.$gte = new Date(`${minBirthYear}-01-01T00:00:00.000Z`);
-      }
+      // Filter users based on minAge and maxAge
+      filteredUsers = filteredUsers.filter((user) => {
+        const userBirthYear = new Date(user.dob).getFullYear();
+        const userAge = currentDate.getFullYear() - userBirthYear;
 
-      if (maxAge) {
-        const maxBirthYear = new Date().getFullYear() - parseInt(maxAge, 10);
-        query.dob.$lte = new Date(`${maxBirthYear}-12-31T23:59:59.999Z`);
-      }
+        return minAge < userAge && userAge < maxAge;
+      });
+
+      // Log the filtered users count after applying the age condition
+      console.log("Filtered users after age condition:", filteredUsers.length);
     }
 
-    const filteredUsers = await User.find(query);
+    // Log the constructed query
+    console.log("Constructed Query:", query);
 
-    // res.json({ data: filteredUsers });
-    return res.json({ users: filteredUsers });
+    // Finding users in the database based on the constructed query
+    const usersWithQuery = await User.find(query);
+
+    // Log the number of users with the query
+    console.log("Filtered users based on query:", usersWithQuery.length);
+
+    // Returning the filtered users as a JSON response
+    return res.json({ users: usersWithQuery });
   } catch (error) {
+    // Handling any errors that may occur during the execution of the function
     console.error(error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 };
+
+
+// exports.getFilterProfile = async (req, res) => {
+//   try {
+//     const { gender, location, distance, minAge, maxAge } = req.body;
+
+//     let query = {};
+
+//     if (gender) {
+//       query.gender = gender;
+//     }
+
+//     if (location && distance) {
+//       const [longitude, latitude] = location.split(",").map(parseFloat);
+
+//       query.loc = {
+//         $near: {
+//           $geometry: {
+//             type: "Point",
+//             coordinates: [longitude, latitude],
+//           },
+//           $maxDistance: parseFloat(distance) * 1000,
+//         },
+//       };
+//     }
+
+//     if (minAge || maxAge) {
+//       query.dob = {};
+
+//       if (minAge) {
+//         const minBirthYear = new Date().getFullYear() - parseInt(minAge, 10);
+//         query.dob.$gte = new Date(`${minBirthYear}-01-01T00:00:00.000Z`);
+//       }
+
+//       if (maxAge) {
+//         const maxBirthYear = new Date().getFullYear() - parseInt(maxAge, 10);
+//         query.dob.$lte = new Date(`${maxBirthYear}-12-31T23:59:59.999Z`);
+//       }
+//     }
+
+//     const filteredUsers = await User.find(query);
+
+//     // res.json({ data: filteredUsers });
+//     return res.json({ users: filteredUsers });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ success: false, error: "Internal Server Error" });
+//   }
+// };
 
 // LikedOrNotProfile route handler
 exports.LikedOrNotProfile = async (req, res) => {
@@ -174,6 +254,97 @@ exports.getLikedDislikeProfile = async (req, res) => {
     return res.json({ likedProfiles });
   } catch (error) {
     console.error("Error retrieving liked profiles:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+exports.updateRequestStatus = async (req, res) => {
+  try {
+    var { userID, likedID, status, requestID } = req.body;
+
+    if (!userID || !likedID || !status || !requestID) {
+      console.log("Invalid request parameters");
+      return res.status(400).json({ error: "Invalid request parameters" });
+    }
+
+    if (status == 1) {
+      // declined and delete from Like_Dislike_Requested
+      // Check for Request Existence
+      var existingRequest = await LikeDislikeRequested.findById(requestID);
+      if (!existingRequest) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      // Delete the request using requestID
+      var deleteRequestResult = await LikeDislikeRequested.deleteOne({
+        _id: requestID,
+      });
+
+      console.log(" Reject and Delete Request Result:", deleteRequestResult);
+
+      return res.json({
+        success: true,
+        message: "Request rejected successfully.",
+        likedProfiles: filteredLikedProfiles,
+      });
+    } else {
+      // Accepted then create chatroom and delete from Like_Dislike_Requested
+      var participants = [userID, likedID];
+      console.log("Participants:", participants);
+
+      var findChatRoom = await ChatRoom.find({ participants: participants });
+
+      console.log("Find Chat Room:", findChatRoom.toString());
+
+      var chatroomID = uuidv4();
+      var lastMessage = "Hey, I liked your profile too...";
+
+      var chatRoom = new ChatRoom({
+        chatroomID,
+        participants,
+        lastMessage,
+      });
+
+      await chatRoom.save();
+
+      // Create Message to chat
+      status = "SENT";
+      var senderID = userID;
+      var recieveID = likedID;
+      var msg = lastMessage;
+      var messageID = chatroomID;
+
+      var chat = new Chat({
+        senderID,
+        msg,
+        messageID,
+        chatroomID: chatRoom._id,
+        status,
+        recieveID,
+      });
+
+      await chat.save();
+
+      // Check for Request Existence
+      var existingRequest = await LikeDislikeRequested.findById(requestID);
+      if (!existingRequest) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      // Delete the request using requestID
+      var deleteRequestResult = await LikeDislikeRequested.deleteOne({
+        _id: requestID,
+      });
+
+      console.log("Accept and Delete Request Result:", deleteRequestResult);
+
+      return res.json({
+        success: true,
+        message: "Request accepted successfully.",
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -477,97 +648,6 @@ exports.getSingleProfile = async (req, res) => {
     return res.json({ profile });
   } else {
     return res.status(400).json({ failed: true, profile });
-  }
-};
-
-exports.updateRequestStatus = async (req, res) => {
-  try {
-    var { userID, likedID, status, requestID } = req.body;
-
-    if (!userID || !likedID || !status || !requestID) {
-      console.log("Invalid request parameters");
-      return res.status(400).json({ error: "Invalid request parameters" });
-    }
-
-    if (status == 1) {
-      // declined and delete from Like_Dislike_Requested
-      // Check for Request Existence
-      var existingRequest = await LikeDislikeRequested.findById(requestID);
-      if (!existingRequest) {
-        return res.status(404).json({ error: "Request not found" });
-      }
-
-      // Delete the request using requestID
-      var deleteRequestResult = await LikeDislikeRequested.deleteOne({
-        _id: requestID,
-      });
-
-      console.log(" Reject and Delete Request Result:", deleteRequestResult);
-
-      return res.json({
-        success: true,
-        message: "Request rejected successfully.",
-        likedProfiles: filteredLikedProfiles,
-      });
-    } else {
-      // Accepted then create chatroom and delete from Like_Dislike_Requested
-      var participants = [userID, likedID];
-      console.log("Participants:", participants);
-
-      var findChatRoom = await ChatRoom.find({ participants: participants });
-
-      console.log("Find Chat Room:", findChatRoom.toString());
-
-      var chatroomID = uuidv4();
-      var lastMessage = "Hey, I liked your profile too...";
-
-      var chatRoom = new ChatRoom({
-        chatroomID,
-        participants,
-        lastMessage,
-      });
-
-      await chatRoom.save();
-
-      // Create Message to chat
-      status = "SENT";
-      var senderID = userID;
-      var recieveID = likedID;
-      var msg = lastMessage;
-      var messageID = chatroomID;
-
-      var chat = new Chat({
-        senderID,
-        msg,
-        messageID,
-        chatroomID: chatRoom._id,
-        status,
-        recieveID,
-      });
-
-      await chat.save();
-
-      // Check for Request Existence
-      var existingRequest = await LikeDislikeRequested.findById(requestID);
-      if (!existingRequest) {
-        return res.status(404).json({ error: "Request not found" });
-      }
-
-      // Delete the request using requestID
-      var deleteRequestResult = await LikeDislikeRequested.deleteOne({
-        _id: requestID,
-      });
-
-      console.log("Accept and Delete Request Result:", deleteRequestResult);
-
-      return res.json({
-        success: true,
-        message: "Request accepted successfully.",
-      });
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 

@@ -14,12 +14,13 @@ const userSchema = mongoose.Schema(
     profilePhoto: { type: String },
     profileScore: { type: Number, default: 50 },
     phoneNo: { type: Number, index: true },
-    gender: String,
+    gender: { type: String },
+    dob: { type: Date },
+    boy:{type: Number},
     loc: {
-      type: { type: String },
+      type: { type: String, default: 'Point' },
       coordinates: [Number],
     },
-    dob: Date,
     height: { type: Number },
     live: { type: String },
     belongTo: { type: String },
@@ -27,8 +28,6 @@ const userSchema = mongoose.Schema(
     degree: { type: String },
     institute: { type: String },
     designation: { type: String },
-    gender: { type: String },
-    dob: { type: Date },
     company: { type: String }, ///
     location: { type: String }, ///
     job: { type: String }, ///

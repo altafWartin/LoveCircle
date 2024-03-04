@@ -3,82 +3,11 @@ const BasicInfo = require("../models/profile/basic_info");
 var { expressjwt } = require("express-jwt");
 const jwt = require("jsonwebtoken");
 
+
 exports.createUser = async (req, res) => {
-  var {
-    phoneNo,
-    gender,
-    password,
-    name,
-    dob,
-    height,
-    live,
-    relationStatus,
-    degree,
-    designation,
-    company,
-    income,
-    date,
-    month,
-    device_tokens,
-    email,
-    type,
-  } = req.body;
-
-console.log("Type:", type);
-
-
-  // return res.json({ user });
-
-  var oldUser;
-  if (type === "phone") {
-    oldUser = await User.findOne({ phoneNo: phoneNo });
-  } else {
-    oldUser = await User.findOne({ email: email });
-  }
-  if (oldUser) {
-    const jwtToken = jwt.sign({ _id: oldUser._id }, process.env.JWT_SECRET, {
-      expiresIn: "90 days",
-    });
-    var user = {
-      name: "User Exists",
-      device_tokens: [],
-      images: [],
-      describe: [],
-      _id: oldUser._id,
-    };
-    return res.json({ user, jwtToken });
-  }
-
-
-
-
-  if (type === "phone") {
-    console.log("Phone")
-    var user = new User({
+  try {
+    const {
       phoneNo,
-      gender,
-      name,
-password,
-      dob,
-      height,
-      live,
-      relationStatus,
-      degree,
-      designation,
-      company,
-      income,
-      device_tokens,
-      // email,
-      // loc: {
-      //   type: "Point",
-      //   coordinates: [lat, long],
-      // },
-    })
-    
-  } else if (type === "email") {
-    console.log("email")
-
-    var user = new User({
       gender,
       password,
       name,
@@ -90,59 +19,251 @@ password,
       designation,
       company,
       income,
+      date,
+      month,
       device_tokens,
       email,
-      // loc: {
-      //   type: "Point",
-      //   coordinates: [lat, long],
-      // },
+      type,
+      latitude,
+      longitude,
+    } = req.body;
+
+    console.log("Type:", type);
+
+    var oldUser;
+    if (type === "phone") {
+      oldUser = await User.findOne({ phoneNo: phoneNo });
+    } else {
+      oldUser = await User.findOne({ email: email });
+    }
+    if (oldUser) {
+      const jwtToken = jwt.sign({ _id: oldUser._id }, process.env.JWT_SECRET, {
+        expiresIn: "90 days",
+      });
+      const userResponse = {
+        name: "User Exists",
+        device_tokens: [],
+        images: [],
+        describe: [],
+        _id: oldUser._id,
+      };
+      return res.json({ user: userResponse, jwtToken });
+    }
+
+    let user;
+    if (type === "phone") {
+      console.log("Phone");
+      user = new User({
+        phoneNo,
+        gender,
+        name,
+        password,
+        dob,
+        height,
+        live,
+        relationStatus,
+        degree,
+        designation,
+        company,
+        income,
+        device_tokens,
+        boy: dob.getFullYear(), // Save the year of birth in 'boy'
+      });
+    } else if (type === "email") {
+      console.log("Email");
+      user = new User({
+        gender,
+        password,
+        name,
+        dob: new Date(dob), // Ensure dob is a valid date string
+        height,
+        live,
+        relationStatus,
+        degree,
+        designation,
+        company,
+        income,
+        device_tokens,
+        email,
+        loc: {
+          type: "Point",
+          coordinates: [latitude, longitude],
+        },
+        boy: new Date(dob).getFullYear(), // Save the year of birth in 'boy'
+      });
+    }
+
+    console.log("User before saving:", user);
+
+    const savedUser = await user.save();
+
+    console.log("User saved successfully:", savedUser);
+
+    const sun_sign = zodiac_sign(date, month);
+    const basicInfo = new BasicInfo({
+      user: savedUser._id,
+      sun_sign,
     });
 
-  }
+    await basicInfo.save();
 
-  console.log("User before saving:", user);
+    await User.findByIdAndUpdate(
+      { _id: savedUser._id },
+      { basic_Info: basicInfo._id }
+    );
+
+    const jwtToken = jwt.sign({ _id: savedUser._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRY,
+    });
+
+    return res.json({ user: savedUser, basicInfo, jwtToken });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+
+// exports.createUser = async (req, res) => {
+//   var {
+//     phoneNo,
+//     gender,
+//     password,
+//     name,
+//     dob,
+//     height,
+//     live,
+//     relationStatus,
+//     degree,
+//     designation,
+//     company,
+//     income,
+//     date,
+//     month,
+//     device_tokens,
+//     email,
+//     type,
+  
+//     latitude,
+//     longitude,
+//   } = req.body;
+
+// console.log("Type:", type);
+
+
+//   // return res.json({ user });
+
+//   var oldUser;
+//   if (type === "phone") {
+//     oldUser = await User.findOne({ phoneNo: phoneNo });
+//   } else {
+//     oldUser = await User.findOne({ email: email });
+//   }
+//   if (oldUser) {
+//     const jwtToken = jwt.sign({ _id: oldUser._id }, process.env.JWT_SECRET, {
+//       expiresIn: "90 days",
+//     });
+//     var user = {
+//       name: "User Exists",
+//       device_tokens: [],
+//       images: [],
+//       describe: [],
+//       _id: oldUser._id,
+//     };
+//     return res.json({ user, jwtToken });
+//   }
+
+
+
+
+//   if (type === "phone") {
+//     console.log("Phone")
+//     var user = new User({
+//       phoneNo,
+//       gender,
+//       name,
+// password,
+//       dob,
+//       height,
+//       live,
+//       relationStatus,
+//       degree,
+//       designation,
+//       company,
+//       income,
+//       device_tokens,
+   
+//     })
+    
+//   } else if (type === "email") {
+//     console.log("email")
+
+//     var user = new User({
+//       gender,
+//       password,
+//       name,
+//       dob,
+//       height,
+//       live,
+//       relationStatus,
+//       degree,
+//       designation,
+//       company,
+//       income,
+//       device_tokens,
+//       email,
+//       loc: {
+//         type: "Point",
+//         coordinates: [ latitude, longitude,]
+//       },
+//     });
+
+//   }
+
+//   console.log("User before saving:", user);
 
  
-  user.save()
-    .then((data) => {
-      console.log("User saved successfully:", data);
+//   user.save()
+//     .then((data) => {
+//       console.log("User saved successfully:", data);
 
-      // return res.json({ data });
-      var user = data._id;
-      // print(data)
-      sun_sign = zodiac_sign(date, month);
-      var basicInfo = new BasicInfo({
-        user,
-        sun_sign,
-      });
+//       // return res.json({ data });
+//       var user = data._id;
+//       // print(data)
+//       sun_sign = zodiac_sign(date, month);
+//       var basicInfo = new BasicInfo({
+//         user,
+//         sun_sign,
+//       });
 
-      basicInfo
-        .save()
-        .then(async () => {
-          var basic_Info = basicInfo._id;
-          await User.findOneAndUpdate(
-            { _id: user },
-            { basic_Info: basic_Info }
-          ).then(() => {
-            user = data;
-            const jwtToken = jwt.sign(
-              { _id: user._id },
-              process.env.JWT_SECRET,
-              {
-                expiresIn: process.env.JWT_EXPIRY,
-              }
-            );
-            return res.json({ user, basicInfo, jwtToken });
-          });
-        })
-        .catch((err) => {
-          return res.status(400).json({ error: err });
-        });
-    })
-    .catch((err) => {
-      return res.status(400).json({ error: err });
-    });
-};
+//       basicInfo
+//         .save()
+//         .then(async () => {
+//           var basic_Info = basicInfo._id;
+//           await User.findOneAndUpdate(
+//             { _id: user },
+//             { basic_Info: basic_Info }
+//           ).then(() => {
+//             user = data;
+//             const jwtToken = jwt.sign(
+//               { _id: user._id },
+//               process.env.JWT_SECRET,
+//               {
+//                 expiresIn: process.env.JWT_EXPIRY,
+//               }
+//             );
+//             return res.json({ user, basicInfo, jwtToken });
+//           });
+//         })
+//         .catch((err) => {
+//           return res.status(400).json({ error: err });
+//         });
+//     })
+//     .catch((err) => {
+//       return res.status(400).json({ error: err });
+//     });
+// };
 
 
 // Define the getAllUsers function
