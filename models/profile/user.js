@@ -14,6 +14,7 @@ const userSchema = mongoose.Schema(
     profilePhoto: { type: String },
     profileScore: { type: Number, default: 50 },
     phoneNo: { type: Number, index: true },
+    likes: { type: Number, default: 0 },
     gender: { type: String },
     dob: { type: Date },
     boy:{type: Number},

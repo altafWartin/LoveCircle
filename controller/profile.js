@@ -32,8 +32,6 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-
-
 exports.getFilterProfile = async (req, res) => {
   try {
     // Extracting parameters from the request body
@@ -111,7 +109,6 @@ exports.getFilterProfile = async (req, res) => {
   }
 };
 
-
 // exports.getFilterProfile = async (req, res) => {
 //   try {
 //     const { gender, location, distance, minAge, maxAge } = req.body;
@@ -161,19 +158,140 @@ exports.getFilterProfile = async (req, res) => {
 // };
 
 // LikedOrNotProfile route handler
+// exports.LikedOrNotProfile = async (req, res) => {
+//   try {
+//     // Destructure request body
+//     const { userID, likedID, status } = req.body;
+
+//     // Create a new instance of LikeDislikeRequested model
+//     const likeDislikeProfile = new LikeDislikeRequested({
+//       userID,
+//       likedID,
+//       status,
+//     });
+
+//     console.log(status, "status");
+
+//     // Check if the profile already exists
+//     const profileExists = await LikeDislikeRequested.findOne({
+//       $and: [{ userID: userID }, { likedID: likedID }],
+//     });
+
+//     if (profileExists === null) {
+//       if (status === 0) {
+//         // Send Notification
+//         console.log(status);
+
+//         // Query for the user with likedID
+//         const user = await User.findOne({ _id: likedID });
+
+//         // Check if the user exists
+//         if (user) {
+//           // Create a new notification for the user whose profile was liked
+//           const newNotification = new Notification({
+//             userId: likedID,
+//             title: "Hey! Good News",
+//             body: `${userID} recently liked your profile. If you like their profile, you can start chatting.`,
+//           });
+
+//           // Save the notification to the database
+//           await newNotification.save();
+
+//           return res.status(201).json({ Notification: newNotification });
+//         } else {
+//           return res.status(404).json({ error: "Liked user not found" });
+//         }
+//       }
+
+//       // Save the new profile
+//       const savedProfile = await likeDislikeProfile.save();
+//       console.log("Profile Saved:", savedProfile);
+//       return res.status(201).json(savedProfile);
+//     } else {
+//       console.log("Profile Already Exists:", profileExists);
+//       return res.status(200).json(profileExists);
+//     }
+//   } catch (error) {
+//     console.error("Error processing LikedOrNotProfile:", error);
+//     return res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
+
+// exports.LikedOrNotProfile = async (req, res) => {
+//   try {
+//     // Destructure request body
+//     const { userID, likedID, status } = req.body;
+
+//     // Create a new instance of LikeDislikeRequested model
+//     const likeDislikeProfile = new LikeDislikeRequested({
+//       userID,
+//       likedID,
+//       status,
+//     });
+
+//     console.log(status, "status");
+
+//     // Check if the profile already exists
+//     const profileExists = await LikeDislikeRequested.findOne({
+//       $and: [{ userID: userID }, { likedID: likedID }],
+//     });
+
+//     if (profileExists === null) {
+//       if (status === 0) {
+//         // Send Notification
+//         console.log(status);
+
+//         // Query for the user with likedID
+//         const likedUser = await User.findOne({ _id: likedID });
+
+//         // Check if the liked user exists
+//         if (likedUser) {
+//           // Increment the like count in the liked user's profile
+//           likedUser.likes += 1;
+//           await likedUser.save();
+
+//           // Create a new notification for the liked user
+//           const newNotification = new Notification({
+//             userId: likedID,
+//             title: "Hey! Good News",
+//             body: `${userID} recently liked your profile. If you like their profile, you can start chatting.`,
+//           });
+
+//           // Save the notification to the database
+//           await newNotification.save();
+
+//           return res.status(201).json({
+//             Notification: newNotification,
+//             LikedUser: likedUser,
+//           });
+//         } else {
+//           return res.status(404).json({ error: "Liked user not found" });
+//         }
+//       }
+
+//       // Save the new profile
+//       const savedProfile = await likeDislikeProfile.save();
+//       console.log("Profile Saved:", savedProfile);
+//       return res.status(201).json(savedProfile);
+//     } else {
+//       console.log("Profile Already Exists:", profileExists);
+//       return res.status(200).json(profileExists);
+//     }
+//   } catch (error) {
+//     console.error("Error processing LikedOrNotProfile:", error);
+//     return res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
+
 exports.LikedOrNotProfile = async (req, res) => {
   try {
-    // Destructure request body
     const { userID, likedID, status } = req.body;
 
-    // Create a new instance of LikeDislikeRequested model
     const likeDislikeProfile = new LikeDislikeRequested({
       userID,
       likedID,
       status,
     });
-
-    console.log(status, "status");
 
     // Check if the profile already exists
     const profileExists = await LikeDislikeRequested.findOne({
@@ -181,16 +299,21 @@ exports.LikedOrNotProfile = async (req, res) => {
     });
 
     if (profileExists === null) {
-      if (status === 0) {
-        // Send Notification
-        console.log(status);
-
+      if (status == 0) {
         // Query for the user with likedID
-        const user = await User.findOne({ _id: likedID });
+        const likedUser = await User.findOne({ _id: likedID });
 
-        // Check if the user exists
-        if (user) {
-          // Create a new notification for the user whose profile was liked
+        // Check if the liked user exists
+        if (likedUser) {
+          // Increment the likes count in the liked user's profile
+          likedUser.likes += 1;
+
+          // Save the liked user object with the updated likes count
+          await likedUser.save();
+
+          console.log(likedUser.likes);
+
+          // Create a new notification for the liked user
           const newNotification = new Notification({
             userId: likedID,
             title: "Hey! Good News",
@@ -200,16 +323,15 @@ exports.LikedOrNotProfile = async (req, res) => {
           // Save the notification to the database
           await newNotification.save();
 
-          return res.status(201).json({ Notification: newNotification });
+          // Return the updated liked user object and notification
+          // Save the new profile
+          const savedProfile = await likeDislikeProfile.save();
+          console.log("Profile Saved:", savedProfile);
+          return res.status(201).json(savedProfile);
         } else {
           return res.status(404).json({ error: "Liked user not found" });
         }
       }
-
-      // Save the new profile
-      const savedProfile = await likeDislikeProfile.save();
-      console.log("Profile Saved:", savedProfile);
-      return res.status(201).json(savedProfile);
     } else {
       console.log("Profile Already Exists:", profileExists);
       return res.status(200).json(profileExists);
@@ -219,6 +341,7 @@ exports.LikedOrNotProfile = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 // Define the API endpoint function
 exports.getLikedDislikeProfile = async (req, res) => {
   const { userID, status } = req.body;
@@ -641,7 +764,7 @@ exports.getSingleProfile = async (req, res) => {
       "sun_sign cuisine political_views looking_for personality first_date drink smoke religion fav_pastime"
     )
     .select(
-      "name email password  images profilePhoto profileScore phoneNo gender loc dob height live belongTo relationStatus degree institute designation gender dob company location job college about income  basic_Info"
+      "name email password  images likes profilePhoto profileScore phoneNo gender loc dob height live belongTo relationStatus degree institute designation gender dob company location job college about income  basic_Info"
     );
 
   if (profile) {
