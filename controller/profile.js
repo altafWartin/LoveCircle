@@ -311,8 +311,6 @@ exports.LikedOrNotProfile = async (req, res) => {
           // Save the liked user object with the updated likes count
           await likedUser.save();
 
-          console.log(likedUser.likes);
-
           // Create a new notification for the liked user
           const newNotification = new Notification({
             userId: likedID,
@@ -322,15 +320,14 @@ exports.LikedOrNotProfile = async (req, res) => {
 
           // Save the notification to the database
           await newNotification.save();
-
-          // Return the updated liked user object and notification
-          // Save the new profile
-          const savedProfile = await likeDislikeProfile.save();
-          console.log("Profile Saved:", savedProfile);
-          return res.status(201).json(savedProfile);
         } else {
           return res.status(404).json({ error: "Liked user not found" });
         }
+      } else {
+        // Save the new profile for status == 1
+        const savedProfile = await likeDislikeProfile.save();
+        console.log("Profile Saved:", savedProfile);
+        return res.status(201).json(savedProfile);
       }
     } else {
       console.log("Profile Already Exists:", profileExists);
@@ -601,15 +598,44 @@ function isValidUrl(string) {
   }
 }
 
-// controller/profile.js (or wherever you retrieve notifications)
+// // controller/profile.js (or wherever you retrieve notifications)
+// exports.GetNotifications = async (req, res) => {
+//   const { userId } = req.body;
+
+//   try {
+//     const notifications = await Notification.find({ userId })
+//       .sort({ createdAt: "desc" })
+//       // .populate('commenterId', 'name') // Populate commenterId with 'name' field
+//       .exec();
+
+//     return res.json({ notifications });
+//   } catch (error) {
+//     console.error("Error retrieving notifications:", error);
+//     return res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
+
+var admin = require("firebase-admin");
+var serviceAccount = require("../lovecircle-b5c68-firebase-adminsdk-ui9y3-1b706666d7.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+// const Notification = require('./models/Notification'); // Import your Notification model
+
 exports.GetNotifications = async (req, res) => {
-  const { userId } = req.body;
+  const { userId, email } = req.body;
 
   try {
     const notifications = await Notification.find({ userId })
       .sort({ createdAt: "desc" })
-      // .populate('commenterId', 'name') // Populate commenterId with 'name' field
       .exec();
+
+    // Iterate through the notifications and send push notifications
+    notifications.forEach((notification) => {
+      sendPushNotification(userId, email, notification.message);
+    });
 
     return res.json({ notifications });
   } catch (error) {
@@ -617,6 +643,41 @@ exports.GetNotifications = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+// Function to send push notification using FCM
+function sendPushNotification(userId, email, message) {
+  // Get the FCM registration token for the user (replace with your logic to fetch the token)
+  const registrationToken = getRegistrationToken(userId);
+
+  if (registrationToken) {
+    const notificationMessage = {
+      data: {
+        email: String(email), // Convert email to string
+        userId: String(userId), // Convert userId to string
+        message: String(message), // Convert message to string
+      },
+      token: registrationToken,
+    };
+
+    admin
+      .messaging()
+      .send(notificationMessage)
+      .then((response) => {
+        console.log("Successfully sent push notification:", response);
+      })
+      .catch((error) => {
+        console.error("Error sending push notification:", error);
+      });
+  }
+}
+
+// Replace this with your logic to fetch the FCM registration token for the user
+function getRegistrationToken(userId) {
+  // Implement your logic to retrieve the FCM registration token for the given userId
+  // (e.g., query the database, use Firebase Authentication, etc.)
+  // Return the FCM registration token or null if not found
+  return "user_fcm_registration_token"; // Replace with your actual logic
+}
 
 // controller/profile.js
 const Comment = require("../models/profile/comment"); // Adjust the path accordingly
@@ -758,14 +819,7 @@ exports.replaceImage = async (req, res) => {
 
 exports.getSingleProfile = async (req, res) => {
   var { _id } = req.body;
-  var profile = await User.find({ _id: _id })
-    .populate(
-      "basic_Info",
-      "sun_sign cuisine political_views looking_for personality first_date drink smoke religion fav_pastime"
-    )
-    .select(
-      "name email password  images likes profilePhoto profileScore phoneNo gender loc dob height live belongTo relationStatus degree institute designation gender dob company location job college about income  basic_Info"
-    );
+  var profile = await User.find({ _id: _id });
 
   if (profile) {
     return res.json({ profile });

@@ -38,11 +38,11 @@ app.use((req, res, next) => {
 // for FCM
 process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-// for FCM
-initializeApp({
-  credential: applicationDefault(),
-  projectId: process.env.FIREBASE_PROJECT_ID,
-});
+// // for FCM
+// initializeApp({
+//   credential: applicationDefault(),
+//   projectId: process.env.FIREBASE_PROJECT_ID,
+// });
 
 
 
@@ -92,9 +92,15 @@ io.on('connection', (socket) => {
     console.log('User disconnected');
   });
 });
+// const admin = require('firebase-admin');
 
+// const serviceAccount = require('./lovecircle-b5c68-firebase-adminsdk-ui9y3-1b706666d7.json');
 
-const port = process.env.PORT || 4000;
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount)
+// });
+
+const port = process.env.PORT || 9000;
 app.listen(port, () => {
   console.log(`Server is running on port chek  ${port}`);
 });
