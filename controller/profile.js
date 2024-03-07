@@ -311,6 +311,8 @@ exports.LikedOrNotProfile = async (req, res) => {
           // Save the liked user object with the updated likes count
           await likedUser.save();
 
+          console.log(likedUser.likes);
+
           // Create a new notification for the liked user
           const newNotification = new Notification({
             userId: likedID,
@@ -320,6 +322,12 @@ exports.LikedOrNotProfile = async (req, res) => {
 
           // Save the notification to the database
           await newNotification.save();
+
+          // Return the updated liked user object and notification
+          // Save the new profile
+          const savedProfile = await likeDislikeProfile.save();
+          console.log("Profile Saved:", savedProfile);
+          return res.status(201).json(savedProfile);
         } else {
           return res.status(404).json({ error: "Liked user not found" });
         }
