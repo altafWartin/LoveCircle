@@ -12,7 +12,7 @@ const userSchema = mongoose.Schema(
     device_tokens: [{ type: String }],
     images: [{ type: String }],
     profilePhoto: { type: String },
-    profileScore: { type: Number, default: 50 },
+    profileScore: { type: Number, default: 30 },
     phoneNo: { type: Number, index: true },
     likes: { type: Number, default: 0 },
     gender: { type: String },

@@ -3,7 +3,6 @@ const BasicInfo = require("../models/profile/basic_info");
 var { expressjwt } = require("express-jwt");
 const jwt = require("jsonwebtoken");
 
-
 exports.createUser = async (req, res) => {
   try {
     const {
@@ -75,6 +74,7 @@ exports.createUser = async (req, res) => {
         gender,
         password,
         name,
+        phoneNo,
         dob: new Date(dob), // Ensure dob is a valid date string
         height,
         live,
@@ -123,8 +123,6 @@ exports.createUser = async (req, res) => {
   }
 };
 
-
-
 // exports.createUser = async (req, res) => {
 //   var {
 //     phoneNo,
@@ -144,13 +142,12 @@ exports.createUser = async (req, res) => {
 //     device_tokens,
 //     email,
 //     type,
-  
+
 //     latitude,
 //     longitude,
 //   } = req.body;
 
 // console.log("Type:", type);
-
 
 //   // return res.json({ user });
 
@@ -174,9 +171,6 @@ exports.createUser = async (req, res) => {
 //     return res.json({ user, jwtToken });
 //   }
 
-
-
-
 //   if (type === "phone") {
 //     console.log("Phone")
 //     var user = new User({
@@ -193,9 +187,9 @@ exports.createUser = async (req, res) => {
 //       company,
 //       income,
 //       device_tokens,
-   
+
 //     })
-    
+
 //   } else if (type === "email") {
 //     console.log("email")
 
@@ -223,7 +217,6 @@ exports.createUser = async (req, res) => {
 
 //   console.log("User before saving:", user);
 
- 
 //   user.save()
 //     .then((data) => {
 //       console.log("User saved successfully:", data);
@@ -265,10 +258,9 @@ exports.createUser = async (req, res) => {
 //     });
 // };
 
-
 // Define the getAllUsers function
 exports.getAllUsers = async (req, res) => {
-  console.log("hello")
+  console.log("hello");
   try {
     // Fetch all users from the database
     const allUsers = await User.find();
@@ -309,38 +301,58 @@ exports.getAllUsers = async (req, res) => {
 //   }
 // };
 
-const bcrypt = require('bcrypt'); // for password hashing
+const bcrypt = require("bcrypt"); // for password hashing
+// Function to update device tokens in the database
 
-
-exports.loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
+const updateDeviceTokens = async (userId, newDeviceTokens) => {
   try {
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Compare the provided password with the hashed password stored in the database
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // If the password is valid, create a JWT token for the user
-    const jwtToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRY,
-    });
-
-    return res.json({ user, jwtToken });
+    // Use exec() to return a promise
+    console.log(newDeviceTokens);
+    await User.findByIdAndUpdate(userId, {
+      device_tokens: newDeviceTokens,
+    }).exec();
+    console.log("Device tokens updated successfully");
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error updating device tokens:", error);
+    throw error;
   }
 };
 
+// Login API
+exports.loginUser = async (req, res) => {
+  const { email, password, newDeviceTokens } = req.body;
+
+  try {
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Update the device tokens before proceeding
+    await updateDeviceTokens(user._id, newDeviceTokens);
+    let updatedUser = await User.findById(user._id);
+
+
+
+    console.log(newDeviceTokens, updatedUser);
+    const jwtToken = jwt.sign({ _id: updatedUser._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRY,
+    });
+
+
+    return res.json({ updatedUser, jwtToken });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 exports.changePassword = async (req, res) => {
   const { currentPassword, newPassword, _id } = req.body;
@@ -350,25 +362,28 @@ exports.changePassword = async (req, res) => {
     const user = await User.findById(_id);
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
-    console.log("cp",currentPassword)
-    console.log("np",newPassword)
+    console.log("cp", currentPassword);
+    console.log("np", newPassword);
     // Compare the provided current password with the hashed password stored in the database
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
 
     if (!isCurrentPasswordValid) {
-      return res.status(401).json({ error: 'Invalid current password' });
+      return res.status(401).json({ error: "Invalid current password" });
     }
 
     // Hash the new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-    console.log("hashedNewPassword",hashedNewPassword)
+    console.log("hashedNewPassword", hashedNewPassword);
     // Update the user's password in the database
     user.password = newPassword;
-    console.log("userp",user.password)
+    console.log("userp", user.password);
     await user.save();
 
     // Create a new JWT token for the user with the updated password
@@ -376,13 +391,12 @@ exports.changePassword = async (req, res) => {
       expiresIn: process.env.JWT_EXPIRY,
     });
 
-    return res.json({ message: 'Password changed successfully', jwtToken });
+    return res.json({ message: "Password changed successfully", jwtToken });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 exports.requireSignin = expressjwt({
   secret: process.env.JWT_SECRET,
@@ -536,8 +550,6 @@ exports.userExists = async (req, res) => {
 //     return res.status(500).json({ error: "Internal Server Error" });
 //   }
 // };
-
-
 
 exports.updateAdditionalDetails = async (req, res) => {
   var {

@@ -61,7 +61,7 @@ exports.getFilterProfile = async (req, res) => {
             type: "Point",
             coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          $maxDistance: distance * 1000, // Keep distance in kilometers
+          $maxDistance: distance * 10000, // Keep distance in kilometers
         },
       };
       console.log("Query with location:", query.loc);
@@ -590,6 +590,61 @@ exports.uploadImage = async (req, res) => {
   }
 };
 
+exports.deleteImage = async (req, res) => {
+  try {
+    const { id, imageUrl } = req.body;
+
+    if (!id) {
+      console.log("id is not provided");
+      return res.status(400).json({ error: "id is not provided" });
+    }
+
+    if (!imageUrl || !isValidUrl(imageUrl)) {
+      console.log("Invalid imageUrl provided");
+      return res.status(400).json({ error: "Invalid imageUrl provided" });
+    }
+    console.log("1");
+    // Extract the S3 key from the imageUrl
+    // const s3Key = new URL(imageUrl).pathname.substring(1);
+    // console.log("2");
+
+    // // Attempt to delete the image from AWS S3
+    // const deleteParams = {
+    //   Bucket: process.env.AWS_BUCKET_NAME,
+    //   Key: s3Key,
+    // };
+    // console.log(deleteParams);
+    // console.log("3");
+
+    // await s3.deleteObject(deleteParams).promise();
+    // console.log("Image deleted from AWS S3");
+    // console.log("4");
+
+    // Attempt to update the user's document by removing the deleted image URL
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { $pull: { images: imageUrl } },
+      { new: true }
+    );
+    console.log("5");
+
+    if (updatedUser) {
+      console.log("6");
+      console.log("User profile updated:", updatedUser);
+      return res.json({
+        message: "Image deleted and user profile updated successfully",
+        profile: updatedUser,
+      });
+    } else {
+      console.log("findOneAndUpdate not working");
+      return res.status(500).json({ error: "findOneAndUpdate not working" });
+    }
+  } catch (error) {
+    console.error("Error processing delete image request:", error);
+    return res.status(500).json("Internal Server Error");
+  }
+};
+
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -631,19 +686,43 @@ admin.initializeApp({
 });
 
 // const Notification = require('./models/Notification'); // Import your Notification model
-
 exports.GetNotifications = async (req, res) => {
-  const { userId, email } = req.body;
+  const { userId } = req.body;
 
   try {
+    // Fetch notifications from the database
     const notifications = await Notification.find({ userId })
       .sort({ createdAt: "desc" })
       .exec();
+    console.log("1");
+
+    // Fetch user details using the user ID
+    const user = await User.findById(userId)
+      .select("email device_tokens")
+      .exec();
+
+    if (!user) {
+      console.log("User not found");
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    console.log("User found:", user);
 
     // Iterate through the notifications and send push notifications
     notifications.forEach((notification) => {
-      sendPushNotification(userId, email, notification.message);
+      console.log("2");
+
+      // Use the fetched email and device token
+      console.log("Sending push notification to:", user.email);
+      sendPushNotification(
+        userId,
+        user.email,
+        notification.message,
+        user.device_tokens
+      );
+      console.log("3");
     });
+    console.log("4");
 
     return res.json({ notifications });
   } catch (error) {
@@ -651,44 +730,41 @@ exports.GetNotifications = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+function sendPushNotification(userId, email, message, deviceToken) {
+  console.log("5");
 
-// Function to send push notification using FCM
-function sendPushNotification(userId, email, message) {
-  // Get the FCM registration token for the user (replace with your logic to fetch the token)
-  const registrationToken = getRegistrationToken(userId);
-
-  if (registrationToken) {
+  console.log(userId, email, message, deviceToken);
+  if (deviceToken) {
+    console.log("6");
     const notificationMessage = {
       data: {
-        email: String(email), // Convert email to string
-        userId: String(userId), // Convert userId to string
-        message: String(message), // Convert message to string
+        email: String(email),
+        userId: String(userId),
+        message: String(message),
       },
-      token: registrationToken,
+      token: deviceToken, // Make sure deviceToken is a valid FCM registration token
     };
+    console.log("7");
 
     admin
       .messaging()
       .send(notificationMessage)
       .then((response) => {
+        console.log("8");
         console.log("Successfully sent push notification:", response);
       })
       .catch((error) => {
         console.error("Error sending push notification:", error);
       });
+  } else {
+    console.log("Device token is missing. Skipping push notification.");
   }
 }
 
-// Replace this with your logic to fetch the FCM registration token for the user
-function getRegistrationToken(userId) {
-  // Implement your logic to retrieve the FCM registration token for the given userId
-  // (e.g., query the database, use Firebase Authentication, etc.)
-  // Return the FCM registration token or null if not found
-  return "user_fcm_registration_token"; // Replace with your actual logic
-}
-
+// ... (remaining code)
 // controller/profile.js
 const Comment = require("../models/profile/comment"); // Adjust the path accordingly
+const user = require("../models/profile/user");
 
 // ... other imports ...
 
@@ -938,6 +1014,17 @@ exports.updateUserFields = async (req, res) => {
     about,
     // Add a field to store the photo key in the user document
   };
+
+  // Calculate profileScore based on filled fields
+  const filledFieldsCount = Object.values(update).filter(
+    (value) => value
+  ).length;
+  const totalFields = Object.keys(update).length;
+  const profileScore = (filledFieldsCount / totalFields) * 100;
+
+  console.log(profileScore);
+  // Include profileScore in the update
+  update.profileScore = profileScore;
 
   const filter = { _id: _id };
 

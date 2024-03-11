@@ -11,6 +11,7 @@ const {
   GetComment,
   getFilterProfile,
   GetNotifications,
+  deleteImage,
   getLikedDislikeProfile,
   uploadImage,
   replaceImage,
@@ -35,6 +36,7 @@ router.post("/addComment", AddComment);
 router.post("/getComment", GetComment);
 router.post("/notifications", GetNotifications);
 router.post("/uploadImage", upload.single("photo"), uploadImage);
+router.post("/deleteImage", deleteImage);
 router.post("/replaceImage", upload.single("newPhoto"), replaceImage);
 router.post("/getSingleProfile", getSingleProfile);
 router.post("/updateUserFields", updateUserFields);
