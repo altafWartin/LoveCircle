@@ -35,7 +35,10 @@ exports.getProfile = async (req, res) => {
 exports.getFilterProfile = async (req, res) => {
   try {
     // Extracting parameters from the request body
-    const { gender, longitude, latitude, distance, minAge, maxAge } = req.body;
+    let { gender, longitude, latitude, distance, minAge, maxAge } = req.body;
+    console.log(distance)
+    distance = distance / 2;
+    console.log(distance)
 
     // Constructing the base query based on gender and location
     let query = {};
@@ -52,6 +55,7 @@ exports.getFilterProfile = async (req, res) => {
           $maxDistance: distance * 1000, // Keep distance in kilometers
         },
       };
+
     }
 
     // Finding all users in the database
@@ -661,80 +665,54 @@ admin.initializeApp({
 });
 
 // const Notification = require('./models/Notification'); // Import your Notification model
+
 exports.GetNotifications = async (req, res) => {
   const { userId } = req.body;
 
   try {
-    // Fetch notifications from the database
-    const notifications = await Notification.find({ userId })
-      .sort({ createdAt: "desc" })
-      .exec();
-    console.log("1");
-
     // Fetch user details using the user ID
-    const user = await User.findById(userId)
-      .select("email device_tokens")
-      .exec();
+    const user = await User.findById(userId).select("email device_tokens").exec();
 
     if (!user) {
       console.log("User not found");
       return res.status(404).json({ error: "User not found" });
     }
 
-    console.log("User found:", user);
+    // Function to send push notification
+    function sendPushNotification(email, message, deviceToken) {
+      if (deviceToken) {
+        const notificationMessage = {
+          data: {
+            email: String(email),
+            userId: String(userId),
+            message: String(message),
+          },
+          token: deviceToken, // Use the device token provided
+        };
 
-    // Iterate through the notifications and send push notifications
-    notifications.forEach((notification) => {
-      console.log("2");
+        admin.messaging().send(notificationMessage)
+          .then((response) => {
+            console.log("Successfully sent push notification:", response);
+          })
+          .catch((error) => {
+            console.error("Error sending push notification:", error);
+          });
+      } else {
+        console.log("Device token is missing. Skipping push notification.");
+      }
+    }
 
-      // Use the fetched email and device token
-      console.log("Sending push notification to:", user.email);
-      sendPushNotification(
-        userId,
-        user.email,
-        notification.message,
-        user.device_tokens
-      );
-      console.log("3");
+    // Send push notification to each device token associated with the user
+    user.device_tokens.forEach((deviceToken) => {
+      sendPushNotification(user.email, "Your notification message goes here", deviceToken);
     });
-    console.log("4");
 
-    return res.json({ notifications });
+    res.json({ message: "Push notification sent successfully" });
   } catch (error) {
-    console.error("Error retrieving notifications:", error);
+    console.error("Error retrieving user details:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-function sendPushNotification(userId, email, message, deviceToken) {
-  console.log("5");
-
-  console.log(userId, email, message, deviceToken);
-  if (deviceToken) {
-    console.log("6");
-    const notificationMessage = {
-      data: {
-        email: String(email),
-        userId: String(userId),
-        message: String(message),
-      },
-      token: deviceToken, // Make sure deviceToken is a valid FCM registration token
-    };
-    console.log("7");
-
-    admin
-      .messaging()
-      .send(notificationMessage)
-      .then((response) => {
-        console.log("8");
-        console.log("Successfully sent push notification:", response);
-      })
-      .catch((error) => {
-        console.error("Error sending push notification:", error);
-      });
-  } else {
-    console.log("Device token is missing. Skipping push notification.");
-  }
-}
 
 // ... (remaining code)
 // controller/profile.js
@@ -886,92 +864,6 @@ exports.getSingleProfile = async (req, res) => {
     return res.status(400).json({ failed: true, profile });
   }
 };
-
-// exports.updateUserFields = async (req, res) => {
-//   var { designation, company, income, _id, degree } = req.body;
-
-//   const filter = { _id: _id };
-//   var update;
-
-//   if (designation) {
-//     console.log(designation);
-//     update = { designation: designation };
-//   }
-//   if (income) {
-//     update = { company: company, income: income };
-//   }
-//   if (degree) {
-//     update = { degree: degree };
-//   }
-
-//   let user = await User.findOneAndUpdate(filter, update, { new: true });
-
-//   return res.json({ user });
-// };
-
-// exports.updateUserFields = async (req, res) => {
-//   const {
-//     name,
-//     designation,
-//     company,
-//     income,
-//     _id,
-//     degree,
-//     gender,
-//     dob,
-//     location,
-//     job,
-//     college,
-//     about,
-//   } = req.body;
-
-//   const filter = { _id: _id };
-//   const update = {};
-
-//   if (designation) {
-//     update.designation = designation;
-//   }
-//   if (company) {
-//     update.company = company;
-//   }
-//   if (income) {
-//     update.income = income;
-//   }
-//   if (degree) {
-//     update.degree = degree;
-//   }
-//   if (gender) {
-//     update.gender = gender;
-//   }
-//   if (dob) {
-//     update.dob = dob;
-//   }
-//   if (location) {
-//     update.location = location;
-//   }
-//   if (job) {
-//     update.job = job;
-//   }
-//   if (college) {
-//     update.college = college;
-//   }
-//   if (about) {
-//     update.about = about;
-//   }
-
-//   if (name) {
-//     update.name = name;
-//   }
-
-//   try {
-//     const user = await User.findOneAndUpdate(filter, update, { new: true });
-//     return res.json({ user });
-//   } catch (error) {
-//     // Handle error appropriately
-//     console.error(error);
-//     return res.status(500).json({ error: "Internal Server Error" });
-//   }
-// };
 
 
 exports.updateUserFields = async (req, res) => {
