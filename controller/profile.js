@@ -37,23 +37,11 @@ exports.getFilterProfile = async (req, res) => {
     // Extracting parameters from the request body
     const { gender, longitude, latitude, distance, minAge, maxAge } = req.body;
 
-    // Initializing an empty query object
+    // Constructing the base query based on gender and location
     let query = {};
-
-    console.log("Received request with filters:");
-    console.log("Gender:", gender);
-    console.log("Longitude:", longitude);
-    console.log("Latitude:", latitude);
-    console.log("Distance:", distance);
-    console.log("Min Age:", minAge);
-    console.log("Max Age:", maxAge);
-
-    // Adding gender filter to the query if gender is provided
     if (gender) {
       query.gender = gender;
     }
-
-    // Adding location filter to the query if longitude, latitude, and distance are provided
     if (longitude && latitude && distance) {
       query.loc = {
         $near: {
@@ -61,26 +49,20 @@ exports.getFilterProfile = async (req, res) => {
             type: "Point",
             coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          $maxDistance: distance * 10000, // Keep distance in kilometers
+          $maxDistance: distance * 1000, // Keep distance in kilometers
         },
       };
-      console.log("Query with location:", query.loc);
     }
 
     // Finding all users in the database
-    const allUsers = await User.find();
-
-    // Log the number of all users
-    console.log("All Users:", allUsers.length);
+    let allUsers = await User.find(query);
 
     // Filter users based on age if minAge or maxAge are provided
-    let filteredUsers = allUsers;
-
     if (minAge || maxAge) {
       const currentDate = new Date();
 
       // Filter users based on minAge and maxAge
-      filteredUsers = filteredUsers.filter((user) => {
+      allUsers = allUsers.filter((user) => {
         const userBirthYear = new Date(user.dob).getFullYear();
         const userAge = currentDate.getFullYear() - userBirthYear;
 
@@ -88,26 +70,19 @@ exports.getFilterProfile = async (req, res) => {
       });
 
       // Log the filtered users count after applying the age condition
-      console.log("Filtered users after age condition:", filteredUsers.length);
+      console.log("Filtered users after age condition:", allUsers.length);
     }
 
-    // Log the constructed query
-    console.log("Constructed Query:", query);
-
-    // Finding users in the database based on the constructed query
-    const usersWithQuery = await User.find(query);
-
-    // Log the number of users with the query
-    console.log("Filtered users based on query:", usersWithQuery.length);
-
     // Returning the filtered users as a JSON response
-    return res.json({ users: usersWithQuery });
+    return res.json({ users: allUsers });
   } catch (error) {
     // Handling any errors that may occur during the execution of the function
     console.error(error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 };
+
+
 
 // exports.getFilterProfile = async (req, res) => {
 //   try {
@@ -998,55 +973,61 @@ exports.getSingleProfile = async (req, res) => {
 //   }
 // };
 
+
 exports.updateUserFields = async (req, res) => {
-  const { _id, name, dob, gender, location, job, company, college, about } =
-    req.body;
-
-  // Update fields
-  const update = {
-    name,
-    dob,
-    gender,
-    location,
-    job,
-    company,
-    college,
-    about,
-    // Add a field to store the photo key in the user document
-  };
-
-  // Calculate profileScore based on filled fields
-  const filledFieldsCount = Object.values(update).filter(
-    (value) => value
-  ).length;
-  const totalFields = Object.keys(update).length;
-  const profileScore = (filledFieldsCount / totalFields) * 100;
-
-  console.log(profileScore);
-  // Include profileScore in the update
-  update.profileScore = profileScore;
-
-  const filter = { _id: _id };
-
   try {
+    const {
+      _id,
+      fullName,
+      dob,
+      email,
+      gender,
+      location,
+      job,
+      company,
+      college,
+      about,
+    } = req.body;
+
+    console.log("Received update request:", req.body);
+
+    // Update fields
+    const update = {
+      fullName,
+      dob,
+      gender,
+      email,
+      location,
+      job,
+      company,
+      college,
+      about,
+      // Add any other fields you want to update here
+    };
+
+    console.log("Update object:", update);
+
+    const filter = { _id: _id };
+
     // Update user in the database
     const user = await User.findOneAndUpdate(filter, update, { new: true });
 
-    return res.json({ user });
+    if (!user) {
+      // User not found in the database
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log("User after update:", user);
+
+    return res.json({ success: true, message: 'User updated successfully', data: user });
   } catch (error) {
-    // Handle error appropriately
-    console.error(error);
+    console.error("Error processing update user fields request:", error);
+
+    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(400).json({ error: 'Invalid user ID format' });
+    }
+
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// function getAge(DOB) {
-//   var today = new Date();
-//   var birthDate = new Date(DOB);
-//   var age = today.getFullYear() - birthDate.getFullYear();
-//   var m = today.getMonth() - birthDate.getMonth();
-//   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-//     age = age - 1;
-//   }
-//   return age;
-// }
