@@ -82,7 +82,54 @@ app.listen(port, () => {
   console.log(`Server is running on port chek  ${port}`);
 });
 
-app.get("/", async (req, res, next) => {
-  res.status(200).send("Hello World 4");
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK with your service account credentials
+const serviceAccount = require('./lovecircle-b5c68-firebase-adminsdk-ui9y3-1b706666d7.json');
+
+// Check if Firebase Admin SDK has been initialized before initializing it again
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+}
+
+async function sendPushNotification(deviceToken, title, body) {
+  try {
+    const message = {
+      notification: {
+        title: title,
+        body: body
+      },
+      token: deviceToken
+    };
+
+    const response = await admin.messaging().send(message);
+    console.log('Successfully sent message:', response);
+    return response;
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+}
+
+
+
+app.get("/test", async (req, res, next) => {
+  try {
+    const deviceToken = 'c1iI3Lp4Q6Gt_fQMctG7FR:APA91bFgY6Sp0OexbxY04SY7PVqMnih-RcHbIdDH73CX-8hB7WR9aVFIujhJ5n5RKhfBx8FN86G0l9N04-ceJHlsa0bFgUH7o2n8p8WyB7rvGFv4zbbS9SnO4GW8e0GbBVJnqhw9gvNS'; 
+    const title = 'Test Notification';
+    const body = 'This is a test notification from your Node.js server.';
+
+    await sendPushNotification(deviceToken, title, body);
+    
+    res.status(200).send("Notification sent successfully!");
+  } catch (error) {
+    console.error('Failed to send push notification:', error);
+    res.status(500).send("Failed to send push notification");
+  }
 });
 
+app.get("/", async (req, res) => {
+  res.send("Hello World!");
+})

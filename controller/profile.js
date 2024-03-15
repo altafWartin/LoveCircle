@@ -88,179 +88,25 @@ exports.getFilterProfile = async (req, res) => {
 
 
 
-// exports.getFilterProfile = async (req, res) => {
-//   try {
-//     const { gender, location, distance, minAge, maxAge } = req.body;
 
-//     let query = {};
-
-//     if (gender) {
-//       query.gender = gender;
-//     }
-
-//     if (location && distance) {
-//       const [longitude, latitude] = location.split(",").map(parseFloat);
-
-//       query.loc = {
-//         $near: {
-//           $geometry: {
-//             type: "Point",
-//             coordinates: [longitude, latitude],
-//           },
-//           $maxDistance: parseFloat(distance) * 1000,
-//         },
-//       };
-//     }
-
-//     if (minAge || maxAge) {
-//       query.dob = {};
-
-//       if (minAge) {
-//         const minBirthYear = new Date().getFullYear() - parseInt(minAge, 10);
-//         query.dob.$gte = new Date(`${minBirthYear}-01-01T00:00:00.000Z`);
-//       }
-
-//       if (maxAge) {
-//         const maxBirthYear = new Date().getFullYear() - parseInt(maxAge, 10);
-//         query.dob.$lte = new Date(`${maxBirthYear}-12-31T23:59:59.999Z`);
-//       }
-//     }
-
-//     const filteredUsers = await User.find(query);
-
-//     // res.json({ data: filteredUsers });
-//     return res.json({ users: filteredUsers });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ success: false, error: "Internal Server Error" });
-//   }
-// };
-
-// LikedOrNotProfile route handler
-// exports.LikedOrNotProfile = async (req, res) => {
-//   try {
-//     // Destructure request body
-//     const { userID, likedID, status } = req.body;
-
-//     // Create a new instance of LikeDislikeRequested model
-//     const likeDislikeProfile = new LikeDislikeRequested({
-//       userID,
-//       likedID,
-//       status,
-//     });
-
-//     console.log(status, "status");
-
-//     // Check if the profile already exists
-//     const profileExists = await LikeDislikeRequested.findOne({
-//       $and: [{ userID: userID }, { likedID: likedID }],
-//     });
-
-//     if (profileExists === null) {
-//       if (status === 0) {
-//         // Send Notification
-//         console.log(status);
-
-//         // Query for the user with likedID
-//         const user = await User.findOne({ _id: likedID });
-
-//         // Check if the user exists
-//         if (user) {
-//           // Create a new notification for the user whose profile was liked
-//           const newNotification = new Notification({
-//             userId: likedID,
-//             title: "Hey! Good News",
-//             body: `${userID} recently liked your profile. If you like their profile, you can start chatting.`,
-//           });
-
-//           // Save the notification to the database
-//           await newNotification.save();
-
-//           return res.status(201).json({ Notification: newNotification });
-//         } else {
-//           return res.status(404).json({ error: "Liked user not found" });
-//         }
-//       }
-
-//       // Save the new profile
-//       const savedProfile = await likeDislikeProfile.save();
-//       console.log("Profile Saved:", savedProfile);
-//       return res.status(201).json(savedProfile);
-//     } else {
-//       console.log("Profile Already Exists:", profileExists);
-//       return res.status(200).json(profileExists);
-//     }
-//   } catch (error) {
-//     console.error("Error processing LikedOrNotProfile:", error);
-//     return res.status(500).json({ error: "Internal Server Error" });
-//   }
-// };
-
-// exports.LikedOrNotProfile = async (req, res) => {
-//   try {
-//     // Destructure request body
-//     const { userID, likedID, status } = req.body;
-
-//     // Create a new instance of LikeDislikeRequested model
-//     const likeDislikeProfile = new LikeDislikeRequested({
-//       userID,
-//       likedID,
-//       status,
-//     });
-
-//     console.log(status, "status");
-
-//     // Check if the profile already exists
-//     const profileExists = await LikeDislikeRequested.findOne({
-//       $and: [{ userID: userID }, { likedID: likedID }],
-//     });
-
-//     if (profileExists === null) {
-//       if (status === 0) {
-//         // Send Notification
-//         console.log(status);
-
-//         // Query for the user with likedID
-//         const likedUser = await User.findOne({ _id: likedID });
-
-//         // Check if the liked user exists
-//         if (likedUser) {
-//           // Increment the like count in the liked user's profile
-//           likedUser.likes += 1;
-//           await likedUser.save();
-
-//           // Create a new notification for the liked user
-//           const newNotification = new Notification({
-//             userId: likedID,
-//             title: "Hey! Good News",
-//             body: `${userID} recently liked your profile. If you like their profile, you can start chatting.`,
-//           });
-
-//           // Save the notification to the database
-//           await newNotification.save();
-
-//           return res.status(201).json({
-//             Notification: newNotification,
-//             LikedUser: likedUser,
-//           });
-//         } else {
-//           return res.status(404).json({ error: "Liked user not found" });
-//         }
-//       }
-
-//       // Save the new profile
-//       const savedProfile = await likeDislikeProfile.save();
-//       console.log("Profile Saved:", savedProfile);
-//       return res.status(201).json(savedProfile);
-//     } else {
-//       console.log("Profile Already Exists:", profileExists);
-//       return res.status(200).json(profileExists);
-//     }
-//   } catch (error) {
-//     console.error("Error processing LikedOrNotProfile:", error);
-//     return res.status(500).json({ error: "Internal Server Error" });
-//   }
-// };
+// Function to send push notification
+async function sendPushNotification(deviceToken, title, body) {
+  try {
+    const message = {
+      notification: {
+        title: title,
+        body: body
+      },
+      token: deviceToken
+    };
+    const response = await admin.messaging().send(message);
+    console.log('Successfully sent message:', response);
+    return response;
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+}
 
 exports.LikedOrNotProfile = async (req, res) => {
   try {
@@ -290,19 +136,32 @@ exports.LikedOrNotProfile = async (req, res) => {
           // Save the liked user object with the updated likes count
           await likedUser.save();
 
-          console.log(likedUser.likes);
+          // Find the user who initiated the like action (userID)
+          const userWhoLiked = await User.findOne({ _id: userID });
 
-          // Create a new notification for the liked user
-          const newNotification = new Notification({
-            userId: likedID,
-            title: "Hey! Good News",
-            body: `${userID} recently liked your profile. If you like their profile, you can start chatting.`,
-          });
+          // Check if the user who initiated the like exists
+          if (userWhoLiked) {
+            // Create a new notification for the liked user
+            const newNotification = new Notification({
+              userId: likedID,
+              title: "Hey! Good News",
+              body: `${userWhoLiked.name} recently liked your profile. If you like their profile, you can start chatting.`,
+            });
 
-          // Save the notification to the database
-          await newNotification.save();
+            // Save the notification to the database
+            await newNotification.save();
 
-          // Return the updated liked user object and notification
+            // Send push notification to the liked user
+            if (likedUser.device_tokens && likedUser.device_tokens.length > 0) {
+              likedUser.device_tokens.forEach((deviceToken) => {
+                // Send push notification with the name of the user who liked the profile
+                sendPushNotification(deviceToken, "New Like", `${userWhoLiked.name} liked your profile!`);
+              });
+            }
+          } else {
+            return res.status(404).json({ error: "User who liked the profile not found" });
+          }
+
           // Save the new profile
           const savedProfile = await likeDislikeProfile.save();
           console.log("Profile Saved:", savedProfile);
@@ -325,6 +184,73 @@ exports.LikedOrNotProfile = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+
+
+
+// exports.LikedOrNotProfile = async (req, res) => {
+//   try {
+//     const { userID, likedID, status } = req.body;
+
+//     const likeDislikeProfile = new LikeDislikeRequested({
+//       userID,
+//       likedID,
+//       status,
+//     });
+
+//     // Check if the profile already exists
+//     const profileExists = await LikeDislikeRequested.findOne({
+//       $and: [{ userID: userID }, { likedID: likedID }],
+//     });
+
+//     if (profileExists === null) {
+//       if (status == 0) {
+//         // Query for the user with likedID
+//         const likedUser = await User.findOne({ _id: likedID });
+
+//         // Check if the liked user exists
+//         if (likedUser) {
+//           // Increment the likes count in the liked user's profile
+//           likedUser.likes += 1;
+
+//           // Save the liked user object with the updated likes count
+//           await likedUser.save();
+
+//           console.log(likedUser.likes);
+
+//           // Create a new notification for the liked user
+//           const newNotification = new Notification({
+//             userId: likedID,
+//             title: "Hey! Good News",
+//             body: `${userID} recently liked your profile. If you like their profile, you can start chatting.`,
+//           });
+
+//           // Save the notification to the database
+//           await newNotification.save();
+
+//           // Return the updated liked user object and notification
+//           // Save the new profile
+//           const savedProfile = await likeDislikeProfile.save();
+//           console.log("Profile Saved:", savedProfile);
+//           return res.status(201).json(savedProfile);
+//         } else {
+//           return res.status(404).json({ error: "Liked user not found" });
+//         }
+//       } else {
+//         // Save the new profile for status == 1
+//         const savedProfile = await likeDislikeProfile.save();
+//         console.log("Profile Saved:", savedProfile);
+//         return res.status(201).json(savedProfile);
+//       }
+//     } else {
+//       console.log("Profile Already Exists:", profileExists);
+//       return res.status(200).json(profileExists);
+//     }
+//   } catch (error) {
+//     console.error("Error processing LikedOrNotProfile:", error);
+//     return res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
 
 // Define the API endpoint function
 exports.getLikedDislikeProfile = async (req, res) => {
@@ -464,55 +390,6 @@ const s3 = new AWS.S3({
   region: process.env.AWS_BUCKET_REGION,
 });
 
-// exports.uploadImage = async (req, res) => {
-//   try {
-//     const { id } = req.body;
-//     const photo = req.file;
-
-//     console.log("Received image upload request for user:", id, photo);
-
-//     if (!id) {
-//       console.log("id is not provided");
-//       return res.json("id is not provided");
-//     }
-
-//     if (!photo || !photo.buffer) {
-//       console.log("Photo data is not provided");
-//       return res.json("Photo data is not provided");
-//     }
-
-//     const params = {
-//       Bucket: process.env.AWS_BUCKET_NAME,
-//       Key: `images/${id}_${Date.now()}_${photo.originalname}`,
-//       Body: photo.buffer,
-//     };
-
-//     const uploadResult = await s3.upload(params).promise();
-//     console.log("Image uploaded to AWS S3:", uploadResult);
-
-//     // Update the user's document with the image URL
-//     const updatedUser = await User.findByIdAndUpdate(
-//       id,
-//       { $push: { images: uploadResult.Location } }, // Assuming 'images' is an array field in your User model
-//       { new: true }
-//     );
-
-//     if (updatedUser) {
-//       console.log("User profile updated:", updatedUser);
-//       return res.json({
-//         message: 'Image uploaded and user profile updated successfully',
-//         imageUrl: uploadResult.Location,
-//         profile: updatedUser,
-//       });
-//     } else {
-//       console.log("findOneAndUpdate not working");
-//       return res.json("findOneAndUpdate not working");
-//     }
-//   } catch (error) {
-//     console.error("Error uploading image:", error);
-//     return res.status(500).json("Internal Server Error");
-//   }
-// };
 
 exports.uploadImage = async (req, res) => {
   try {
@@ -640,22 +517,22 @@ function isValidUrl(string) {
   }
 }
 
-// // controller/profile.js (or wherever you retrieve notifications)
-// exports.GetNotifications = async (req, res) => {
-//   const { userId } = req.body;
+// controller/profile.js (or wherever you retrieve notifications)
+exports.GetNotifications = async (req, res) => {
+  const { userId } = req.body;
 
-//   try {
-//     const notifications = await Notification.find({ userId })
-//       .sort({ createdAt: "desc" })
-//       // .populate('commenterId', 'name') // Populate commenterId with 'name' field
-//       .exec();
+  try {
+    const notifications = await Notification.find({ userId })
+      .sort({ createdAt: "desc" })
+      // .populate('commenterId', 'name') // Populate commenterId with 'name' field
+      .exec();
 
-//     return res.json({ notifications });
-//   } catch (error) {
-//     console.error("Error retrieving notifications:", error);
-//     return res.status(500).json({ error: "Internal Server Error" });
-//   }
-// };
+    return res.json({ notifications });
+  } catch (error) {
+    console.error("Error retrieving notifications:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
 
 var admin = require("firebase-admin");
 var serviceAccount = require("../lovecircle-b5c68-firebase-adminsdk-ui9y3-1b706666d7.json");
@@ -664,55 +541,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-// const Notification = require('./models/Notification'); // Import your Notification model
 
-exports.GetNotifications = async (req, res) => {
-  const { userId } = req.body;
-
-  try {
-    // Fetch user details using the user ID
-    const user = await User.findById(userId).select("email device_tokens").exec();
-
-    if (!user) {
-      console.log("User not found");
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Function to send push notification
-    function sendPushNotification(email, message, deviceToken) {
-      if (deviceToken) {
-        const notificationMessage = {
-          data: {
-            email: String(email),
-            userId: String(userId),
-            message: String(message),
-          },
-          token: deviceToken, // Use the device token provided
-        };
-
-        admin.messaging().send(notificationMessage)
-          .then((response) => {
-            console.log("Successfully sent push notification:", response);
-          })
-          .catch((error) => {
-            console.error("Error sending push notification:", error);
-          });
-      } else {
-        console.log("Device token is missing. Skipping push notification.");
-      }
-    }
-
-    // Send push notification to each device token associated with the user
-    user.device_tokens.forEach((deviceToken) => {
-      sendPushNotification(user.email, "Your notification message goes here", deviceToken);
-    });
-
-    res.json({ message: "Push notification sent successfully" });
-  } catch (error) {
-    console.error("Error retrieving user details:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
-};
 
 // ... (remaining code)
 // controller/profile.js
